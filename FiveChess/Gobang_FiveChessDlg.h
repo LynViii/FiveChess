@@ -12,6 +12,7 @@ public:
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);
     virtual BOOL OnInitDialog();
+    virtual BOOL PreTranslateMessage(MSG* pMsg);
 
     HICON m_hIcon;
     CChess m_chess;
@@ -24,6 +25,7 @@ protected:
 
     void LayoutScene(int cx, int cy);
     void DrawSidebar(CDC* pDC);
+    void UpdateActionState();
     CString GetModeText() const;
     CString GetDifficultyText() const;
     CString GetStatusText() const;

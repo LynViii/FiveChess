@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 15
+    timeout-minutes: 18
 
     steps:
       - name: Checkout
@@ -28,6 +28,17 @@ jobs:
 
       - name: Build Release Win32
         run: msbuild FiveChess.sln /m /p:Configuration=Release /p:Platform=Win32 /p:RestorePackages=false
+
+      - name: Build AI regression tests
+        run: msbuild tests\AIRegression.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:RestorePackages=false
+
+      - name: Run AI regression tests
+        shell: pwsh
+        run: |
+          & ".\tests\bin\Release\AIRegression.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "AI regression tests failed with exit code $LASTEXITCODE."
+          }
 
       - name: Prepare Windows package
         shell: pwsh
@@ -40,14 +51,19 @@ jobs:
             throw 'FiveChess.exe was not found after the Release build.'
           }
 
-          $package = Join-Path $PWD 'artifacts\FiveChess-v2.2-Windows'
+          $version = $exe.VersionInfo.ProductVersion
+          if (-not $version.StartsWith('2.3')) {
+            throw "Unexpected ProductVersion: $version"
+          }
+
+          $package = Join-Path $PWD 'artifacts\FiveChess-v2.3-Windows'
           New-Item -ItemType Directory -Force -Path $package | Out-Null
 
           Copy-Item $exe.FullName (Join-Path $package 'FiveChess.exe')
-          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.2.0' -Encoding ascii
+          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.3.0' -Encoding ascii
 
           @'
-          FiveChess 2.2
+          FiveChess 2.3
           Author: Yuansheng Li (李源晟)
 
           Windows C++ / MFC Gomoku desktop application.
@@ -59,12 +75,13 @@ jobs:
           '@ | Set-Content -Path (Join-Path $package 'README.txt') -Encoding utf8
 
           Write-Host "Packaged executable from: $($exe.FullName)"
+          Write-Host "Product version: $version"
           Get-ChildItem $package | Format-Table Name, Length
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FiveChess-v2.2-Windows
-          path: artifacts/FiveChess-v2.2-Windows
+          name: FiveChess-v2.3-Windows
+          path: artifacts/FiveChess-v2.3-Windows
           if-no-files-found: error
           retention-days: 30

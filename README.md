@@ -1,8 +1,8 @@
 # FiveChess
 
-一个用 **C++ / MFC** 写的 Windows 五子棋程序。项目最初来自东南大学 2024 年暑期学校课程实践，后来继续补了人机对战、界面、自适应布局、悔棋和自动构建等功能。
+一个用 **C++ / MFC** 写的 Windows 五子棋程序。项目最初来自东南大学 2024 年暑期学校课程实践，之后继续补了人机对战、搜索 AI、界面、自适应布局、悔棋和自动构建。
 
-> 当前版本：**2.2** · Visual Studio 2022 · Win32 · MFC
+> 当前版本：**2.3** · Visual Studio 2022 · Win32 · MFC
 
 ## 功能
 
@@ -16,29 +16,43 @@
 - 终局后仍可悔棋继续本局
 - 最近一步红点标记、五连获胜线和落子悬停预览
 - A–O / 1–15 棋盘坐标
-- 自适应窗口布局与右侧对局信息面板
+- 自适应窗口布局与独立对局信息面板
 - `Ctrl + Z` 悔棋，`F2` / `Ctrl + N` 开始新对局
-- GitHub Actions 自动构建 `Release | Win32` 并打包 Windows 可执行文件
+- GitHub Actions 自动构建、运行 AI 回归测试并打包 Windows 可执行文件
 
 ## 界面与交互
 
 主窗口左侧是棋盘，右侧显示当前状态、对战模式、AI 难度、落子数和是否可以悔棋。棋盘会标记最近一步，形成五连后画出对应连线；鼠标移动到空交叉点时会显示落子预览。
 
-设置窗口可以切换人机 / 双人模式和 AI 难度。双人模式下 AI 难度会自动禁用，应用设置后直接开始新对局。
+窗口大小变化时棋盘和右侧信息区会重新布局。标题、状态卡片和信息行使用独立排版，不依赖空格对齐。源码与资源均按 UTF-8 / Unicode 构建，中文窗口标题、提示信息和设置项直接保留在程序中。
+
+设置窗口可以切换人机 / 双人模式和 AI 难度。双人模式下 AI 难度自动禁用，应用设置后直接开始新对局。
 
 ## AI
 
-AI 代码在 `FiveChess/ChessAI.cpp`。
+AI 代码在 `FiveChess/ChessAI.cpp`，和 MFC 界面代码分开。它只依赖棋盘数组和 Win32 的基础类型，因此可以单独编译测试。
 
-普通搜索前会先做一次直接的战术检查：如果白棋当前有一步可以形成五连，就直接落在获胜点；否则检查黑棋是否存在下一步直接获胜的位置，并优先封堵。没有这种一步战术时，再进入原来的候选点和搜索流程。
+常规搜索前先做一步战术检查：如果白棋当前有一步可以形成五连，就直接落在获胜点；否则检查黑棋是否存在下一步直接获胜的位置并优先封堵。没有这种直接战术时，再进入候选点和搜索流程。
 
-候选点只从已有棋子附近生成，再根据进攻价值、防守价值和中心位置排序，避免每层都遍历 15 × 15 棋盘中的全部空点。
+候选点只从已有棋子附近生成，再根据进攻价值、防守价值和中心位置排序，避免每层遍历 15 × 15 棋盘中的全部空点。
 
 - **初级**：候选点评分选点，同时保留一步胜 / 一步防判断
 - **标准**：2 层 Alpha-Beta 搜索，候选点上限 10
 - **高级**：3 层 Alpha-Beta 搜索，候选点上限 8
 
 评分主要考虑成五、活四、冲四、活三等连续棋型，同时参考对手在同一位置的威胁。搜索时先展开优先级较高的候选点，以增加 Alpha-Beta 提前剪枝的机会。
+
+## 自动测试
+
+`tests/AITacticalTests.cpp` 是一个独立的控制台回归测试，不启动 MFC 窗口。它会对三档 AI 分别检查：
+
+- 空棋盘是否选择中心点
+- 有一步可以获胜时是否直接获胜
+- 对手下一步可以获胜时是否立即封堵
+- 斜线五连是否能正确识别
+- 自己可直接获胜和对手有威胁同时存在时，是否优先结束比赛
+
+GitHub Actions 在生成 Windows 程序前会先编译并运行这组测试，任一场景失败都会使构建失败。
 
 ## 悔棋
 
@@ -52,7 +66,7 @@ AI 代码在 `FiveChess/ChessAI.cpp`。
 
 1. 打开仓库的 **Actions** 页面。
 2. 进入最新一次成功的 **Windows Build**。
-3. 在 **Artifacts** 下载 `FiveChess-v2.2-Windows`。
+3. 在 **Artifacts** 下载 `FiveChess-v2.3-Windows`。
 4. 解压后运行 `FiveChess.exe`。
 
 构建包内还包含 `VERSION.txt` 和简短的 `README.txt`。Actions artifact 保留 30 天，后续成功构建会重新生成。
@@ -61,10 +75,13 @@ AI 代码在 `FiveChess/ChessAI.cpp`。
 
 ```text
 FiveChess-MFC/
-├─ .github/workflows/build.yml          # Windows 构建与打包
+├─ .github/workflows/build.yml          # Windows 构建、测试与打包
 ├─ .gitignore
 ├─ FiveChess.sln
 ├─ README.md
+├─ tests/
+│  ├─ AITacticalTests.cpp               # AI 战术回归测试
+│  └─ AIRegression.vcxproj              # 独立测试工程
 └─ FiveChess/
    ├─ Chess.cpp / Chess.h               # 对局状态、落子、胜负与悔棋
    ├─ ChessAI.cpp / ChessAI.h           # 候选点、评分与 Alpha-Beta AI
@@ -87,6 +104,7 @@ flowchart LR
     GAME --> AI[候选点 + 战术检查 + Alpha-Beta]
     GAME --> DRAW[棋盘 / 棋子 / 标记]
     DRAW --> GDI[GDI / 双缓冲]
+    TEST[AI Regression] --> AI
 ```
 
 ## 本地构建
@@ -100,6 +118,13 @@ flowchart LR
 - Platform Toolset `v143`
 
 使用 Visual Studio 打开 `FiveChess.sln`，选择 `Debug | Win32` 或 `Release | Win32` 后直接 Build Solution 即可。Release 配置使用静态 MFC，Debug 配置使用动态 MFC。
+
+AI 回归测试也可以单独构建：
+
+```powershell
+msbuild tests\AIRegression.vcxproj /p:Configuration=Release /p:Platform=Win32
+.\tests\bin\Release\AIRegression.exe
+```
 
 ## 快捷键
 

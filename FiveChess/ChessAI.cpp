@@ -1,7 +1,7 @@
-#include "StdAfx.h"
 #include "ChessAI.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <vector>
 
 namespace
@@ -15,6 +15,12 @@ namespace
         int y;
         long double priority;
     };
+
+    void SetPoint(POINT& pt, int x, int y)
+    {
+        pt.x = x;
+        pt.y = y;
+    }
 
     bool CandidateGreater(const Candidate& lhs, const Candidate& rhs)
     {
@@ -143,7 +149,7 @@ namespace
         }
 
         const int center = 7;
-        const int distance = abs(x - center) + abs(y - center);
+        const int distance = std::abs(x - center) + std::abs(y - center);
         score += (14 - distance) * 12.0L;
         return score;
     }
@@ -195,7 +201,7 @@ namespace
                 if (!found || priority > bestPriority)
                 {
                     bestPriority = priority;
-                    pt = CPoint(x, y);
+                    SetPoint(pt, x, y);
                     found = true;
                 }
             }
@@ -206,8 +212,6 @@ namespace
 
     bool FindTacticalMove(enumChessColor board[][ROWS], POINT& pt)
     {
-        // Finish the game immediately when possible; otherwise stop the
-        // opponent's one-move win before entering the normal search.
         if (FindImmediateMove(board, WHITE, pt))
         {
             return true;
@@ -400,12 +404,12 @@ namespace
         BuildCandidates(board, WHITE, candidateLimit, candidates);
         if (candidates.empty())
         {
-            pt = CPoint(-1, -1);
+            SetPoint(pt, -1, -1);
             return FALSE;
         }
 
         long double bestScore = -INF_SCORE;
-        pt = CPoint(candidates[0].x, candidates[0].y);
+        SetPoint(pt, candidates[0].x, candidates[0].y);
 
         for (size_t i = 0; i < candidates.size(); ++i)
         {
@@ -426,7 +430,7 @@ namespace
             if (score > bestScore)
             {
                 bestScore = score;
-                pt = CPoint(c.x, c.y);
+                SetPoint(pt, c.x, c.y);
             }
         }
 
@@ -445,11 +449,11 @@ BOOL AIPrimary(POINT& pt, enumChessColor emChess[][ROWS])
     BuildCandidates(emChess, WHITE, 14, candidates);
     if (candidates.empty())
     {
-        pt = CPoint(-1, -1);
+        SetPoint(pt, -1, -1);
         return FALSE;
     }
 
-    pt = CPoint(candidates[0].x, candidates[0].y);
+    SetPoint(pt, candidates[0].x, candidates[0].y);
     return TRUE;
 }
 

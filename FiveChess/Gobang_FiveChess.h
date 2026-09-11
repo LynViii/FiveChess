@@ -1,10 +1,10 @@
 #pragma once
 
 #ifndef __AFXWIN_H__
-	#error "ÔÚ°üº¬´ËÎÄ¼şÖ®Ç°°üº¬¡°stdafx.h¡±ÒÔÉú³É PCH ÎÄ¼ş"
+	#error "åœ¨åŒ…å«æ­¤æ–‡ä»¶ä¹‹å‰åŒ…å«â€œstdafx.hâ€ä»¥ç”Ÿæˆ PCH æ–‡ä»¶"
 #endif
 
-#include "resource.h"		// Ö÷·ûºÅ
+#include "resource.h"		// ä¸»ç¬¦å·
 
 
 class CGobang_FiveChessApp : public CWinApp
@@ -12,11 +12,11 @@ class CGobang_FiveChessApp : public CWinApp
 public:
 	CGobang_FiveChessApp();
 
-// ÖØĞ´
+// é‡å†™
 public:
 	virtual BOOL InitInstance();
 
-// ÊµÏÖ
+// å®ç°
 
 	DECLARE_MESSAGE_MAP()
 };

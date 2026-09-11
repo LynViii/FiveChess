@@ -12,7 +12,9 @@ public:
     void DrawBackground();
     void DrawBoard();
     BOOL DrawPiece(UINT uiX, UINT uiY, BOOL bBlack);
+    void DrawGhostPiece(UINT uiX, UINT uiY, BOOL bBlack);
     void DrawPieceCur(UINT uiX, UINT uiY);
+    void DrawWinningLine(UINT x1, UINT y1, UINT x2, UINT y2);
 
     CRect GetRectBoard();
     CRect GetRectBackground();
@@ -35,4 +37,5 @@ private:
     COLORREF m_crAccent;
 
     void DrawSpecialPoints();
+    void DrawCoordinateLabels();
 };

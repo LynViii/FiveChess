@@ -52,25 +52,25 @@ jobs:
           }
 
           $version = $exe.VersionInfo.ProductVersion
-          if (-not $version.StartsWith('2.3')) {
+          if (-not $version.StartsWith('2.4')) {
             throw "Unexpected ProductVersion: $version"
           }
 
-          $package = Join-Path $PWD 'artifacts\FiveChess-v2.3-Windows'
+          $package = Join-Path $PWD 'artifacts\FiveChess-v2.4-Windows'
           New-Item -ItemType Directory -Force -Path $package | Out-Null
 
           Copy-Item $exe.FullName (Join-Path $package 'FiveChess.exe')
-          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.3.0' -Encoding ascii
+          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.4.0' -Encoding ascii
 
           @'
-          FiveChess 2.3
+          FiveChess 2.4
           Author: Yuansheng Li (李源晟)
 
           Windows C++ / MFC Gomoku desktop application.
 
           Controls:
           - New game: F2 or Ctrl+N
-          - Undo: Ctrl+Z
+          - Undo: Ctrl+Z (up to 3 times per game)
           - Game settings: use the button in the right panel
           '@ | Set-Content -Path (Join-Path $package 'README.txt') -Encoding utf8
 
@@ -81,7 +81,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FiveChess-v2.3-Windows
-          path: artifacts/FiveChess-v2.3-Windows
+          name: FiveChess-v2.4-Windows
+          path: artifacts/FiveChess-v2.4-Windows
           if-no-files-found: error
           retention-days: 30

@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 
 #include "ChessAI.h"
@@ -21,6 +22,11 @@ namespace
                 board[x][y] = NONE;
             }
         }
+    }
+
+    bool BoardsEqual(const enumChessColor lhs[][ROWS], const enumChessColor rhs[][ROWS])
+    {
+        return std::memcmp(lhs, rhs, sizeof(enumChessColor) * COLUMNS * ROWS) == 0;
     }
 
     bool IsInside(int x, int y)
@@ -135,6 +141,39 @@ namespace
         return ai.function(pt, board) && MakesFive(board, pt, WHITE);
     }
 
+    bool RunReturnsLegalMove(const AIEntry& ai)
+    {
+        enumChessColor board[COLUMNS][ROWS];
+        ClearBoard(board);
+        board[7][7] = BLACK;
+        board[7][8] = WHITE;
+        board[8][7] = BLACK;
+        board[6][8] = WHITE;
+        board[8][8] = BLACK;
+
+        POINT pt = { -1, -1 };
+        return ai.function(pt, board)
+            && IsInside(pt.x, pt.y)
+            && board[pt.x][pt.y] == NONE;
+    }
+
+    bool RunPreservesBoard(const AIEntry& ai)
+    {
+        enumChessColor board[COLUMNS][ROWS];
+        enumChessColor before[COLUMNS][ROWS];
+        ClearBoard(board);
+        board[7][7] = BLACK;
+        board[7][8] = WHITE;
+        board[8][7] = BLACK;
+        board[6][8] = WHITE;
+        board[9][6] = BLACK;
+        std::memcpy(before, board, sizeof(board));
+
+        POINT pt = { -1, -1 };
+        const BOOL result = ai.function(pt, board);
+        return result && BoardsEqual(board, before);
+    }
+
     bool Check(const char* caseName, const AIEntry& ai, bool passed)
     {
         std::cout << (passed ? "[PASS] " : "[FAIL] ")
@@ -159,6 +198,8 @@ int main()
         allPassed &= Check("blocks immediate loss", ais[i], RunImmediateBlock(ais[i]));
         allPassed &= Check("detects diagonal win", ais[i], RunDiagonalWin(ais[i]));
         allPassed &= Check("own win has priority over block", ais[i], RunWinBeforeBlock(ais[i]));
+        allPassed &= Check("returns a legal empty point", ais[i], RunReturnsLegalMove(ais[i]));
+        allPassed &= Check("search does not mutate board", ais[i], RunPreservesBoard(ais[i]));
     }
 
     if (!allPassed)

@@ -1,7 +1,9 @@
 #include "ChessAI.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -15,6 +17,22 @@ namespace
         int y;
         long double priority;
     };
+
+    enum TTFlag
+    {
+        TT_EXACT,
+        TT_LOWER_BOUND,
+        TT_UPPER_BOUND
+    };
+
+    struct TTEntry
+    {
+        int depth;
+        long double score;
+        TTFlag flag;
+    };
+
+    typedef std::unordered_map<std::uint64_t, TTEntry> TranspositionTable;
 
     void SetPoint(POINT& pt, int x, int y)
     {
@@ -122,6 +140,83 @@ namespace
         return 0.0L;
     }
 
+    long double WindowThreatScore(const enumChessColor board[][ROWS], int moveX, int moveY,
+        enumChessColor color)
+    {
+        static const int dirs[4][2] = {
+            { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 }
+        };
+
+        long double score = 0.0L;
+        for (int dir = 0; dir < 4; ++dir)
+        {
+            const int dx = dirs[dir][0];
+            const int dy = dirs[dir][1];
+
+            // Inspect every five-cell window that contains the candidate move.
+            // Unlike the contiguous counter below, this also notices gapped
+            // threats such as XX_XX and X_XXX.
+            for (int offset = -4; offset <= 0; ++offset)
+            {
+                const int startX = moveX + offset * dx;
+                const int startY = moveY + offset * dy;
+                const int endX = startX + 4 * dx;
+                const int endY = startY + 4 * dy;
+                if (!IsInside(startX, startY) || !IsInside(endX, endY))
+                {
+                    continue;
+                }
+
+                int own = 0;
+                int empty = 0;
+                bool blocked = false;
+                for (int k = 0; k < 5; ++k)
+                {
+                    const int x = startX + k * dx;
+                    const int y = startY + k * dy;
+                    const enumChessColor cell = (x == moveX && y == moveY) ? color : board[x][y];
+
+                    if (cell == color)
+                    {
+                        ++own;
+                    }
+                    else if (cell == NONE)
+                    {
+                        ++empty;
+                    }
+                    else
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+
+                if (blocked)
+                {
+                    continue;
+                }
+
+                if (own == 5)
+                {
+                    score += WIN_SCORE / 4.0L;
+                }
+                else if (own == 4 && empty == 1)
+                {
+                    score += 12000000.0L;
+                }
+                else if (own == 3 && empty == 2)
+                {
+                    score += 180000.0L;
+                }
+                else if (own == 2 && empty == 3)
+                {
+                    score += 6000.0L;
+                }
+            }
+        }
+        return score;
+    }
+
     long double MovePatternScore(const enumChessColor board[][ROWS], int x, int y,
         enumChessColor color)
     {
@@ -147,6 +242,8 @@ namespace
                 + CountOpenEnd(board, x, y, color, -dx, -dy);
             score += LineScore(count, openEnds);
         }
+
+        score += WindowThreatScore(board, x, y, color);
 
         const int center = 7;
         const int distance = std::abs(x - center) + std::abs(y - center);
@@ -309,12 +406,73 @@ namespace
             - (blackBest + blackSecond * 0.30L) * 1.04L;
     }
 
+    std::uint64_t Mix64(std::uint64_t value)
+    {
+        value += 0x9e3779b97f4a7c15ULL;
+        value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+        return value ^ (value >> 31);
+    }
+
+    std::uint64_t PieceKey(int x, int y, enumChessColor color)
+    {
+        const std::uint64_t index = (std::uint64_t)(y * COLUMNS + x);
+        return Mix64(index * 4ULL + (std::uint64_t)color + 0x51ed2705ULL);
+    }
+
+    std::uint64_t HashBoard(const enumChessColor board[][ROWS])
+    {
+        std::uint64_t hash = 0;
+        for (int x = 0; x < (int)COLUMNS; ++x)
+        {
+            for (int y = 0; y < (int)ROWS; ++y)
+            {
+                if (board[x][y] != NONE)
+                {
+                    hash ^= PieceKey(x, y, board[x][y]);
+                }
+            }
+        }
+        return hash;
+    }
+
+    std::uint64_t PositionKey(std::uint64_t boardHash, bool whiteTurn)
+    {
+        return boardHash ^ Mix64(whiteTurn ? 0x13579bdfULL : 0x2468ace0ULL);
+    }
+
     long double Search(enumChessColor board[][ROWS], int depth,
-        long double alpha, long double beta, bool whiteTurn, int candidateLimit)
+        long double alpha, long double beta, bool whiteTurn, int candidateLimit,
+        std::uint64_t boardHash, TranspositionTable& table)
     {
         if (depth <= 0)
         {
             return EvaluateBoard(board);
+        }
+
+        const long double alphaOriginal = alpha;
+        const long double betaOriginal = beta;
+        const std::uint64_t key = PositionKey(boardHash, whiteTurn);
+        TranspositionTable::const_iterator cached = table.find(key);
+        if (cached != table.end() && cached->second.depth == depth)
+        {
+            const TTEntry& entry = cached->second;
+            if (entry.flag == TT_EXACT)
+            {
+                return entry.score;
+            }
+            if (entry.flag == TT_LOWER_BOUND && entry.score > alpha)
+            {
+                alpha = entry.score;
+            }
+            else if (entry.flag == TT_UPPER_BOUND && entry.score < beta)
+            {
+                beta = entry.score;
+            }
+            if (alpha >= beta)
+            {
+                return entry.score;
+            }
         }
 
         const enumChessColor color = whiteTurn ? WHITE : BLACK;
@@ -325,25 +483,28 @@ namespace
             return EvaluateBoard(board);
         }
 
-        if (whiteTurn)
+        long double best = whiteTurn ? -INF_SCORE : INF_SCORE;
+        for (size_t i = 0; i < candidates.size(); ++i)
         {
-            long double best = -INF_SCORE;
-            for (size_t i = 0; i < candidates.size(); ++i)
+            const Candidate& c = candidates[i];
+            board[c.x][c.y] = color;
+            const std::uint64_t childHash = boardHash ^ PieceKey(c.x, c.y, color);
+
+            long double score;
+            if (IsFiveAfterPlaced(board, c.x, c.y, color))
             {
-                const Candidate& c = candidates[i];
-                board[c.x][c.y] = WHITE;
+                score = whiteTurn ? (WIN_SCORE + depth * 1000.0L) : (-WIN_SCORE - depth * 1000.0L);
+            }
+            else
+            {
+                score = Search(board, depth - 1, alpha, beta, !whiteTurn,
+                    candidateLimit, childHash, table);
+            }
 
-                long double score;
-                if (IsFiveAfterPlaced(board, c.x, c.y, WHITE))
-                {
-                    score = WIN_SCORE + depth * 1000.0L;
-                }
-                else
-                {
-                    score = Search(board, depth - 1, alpha, beta, false, candidateLimit);
-                }
+            board[c.x][c.y] = NONE;
 
-                board[c.x][c.y] = NONE;
+            if (whiteTurn)
+            {
                 if (score > best)
                 {
                     best = score;
@@ -352,44 +513,41 @@ namespace
                 {
                     alpha = best;
                 }
-                if (alpha >= beta)
-                {
-                    break;
-                }
-            }
-            return best;
-        }
-
-        long double best = INF_SCORE;
-        for (size_t i = 0; i < candidates.size(); ++i)
-        {
-            const Candidate& c = candidates[i];
-            board[c.x][c.y] = BLACK;
-
-            long double score;
-            if (IsFiveAfterPlaced(board, c.x, c.y, BLACK))
-            {
-                score = -WIN_SCORE - depth * 1000.0L;
             }
             else
             {
-                score = Search(board, depth - 1, alpha, beta, true, candidateLimit);
+                if (score < best)
+                {
+                    best = score;
+                }
+                if (best < beta)
+                {
+                    beta = best;
+                }
             }
 
-            board[c.x][c.y] = NONE;
-            if (score < best)
-            {
-                best = score;
-            }
-            if (best < beta)
-            {
-                beta = best;
-            }
             if (alpha >= beta)
             {
                 break;
             }
         }
+
+        TTEntry entry;
+        entry.depth = depth;
+        entry.score = best;
+        if (best <= alphaOriginal)
+        {
+            entry.flag = TT_UPPER_BOUND;
+        }
+        else if (best >= betaOriginal)
+        {
+            entry.flag = TT_LOWER_BOUND;
+        }
+        else
+        {
+            entry.flag = TT_EXACT;
+        }
+        table[key] = entry;
         return best;
     }
 
@@ -408,6 +566,10 @@ namespace
             return FALSE;
         }
 
+        TranspositionTable table;
+        table.reserve(4096);
+        const std::uint64_t rootHash = HashBoard(board);
+
         long double bestScore = -INF_SCORE;
         SetPoint(pt, candidates[0].x, candidates[0].y);
 
@@ -415,6 +577,7 @@ namespace
         {
             const Candidate& c = candidates[i];
             board[c.x][c.y] = WHITE;
+            const std::uint64_t childHash = rootHash ^ PieceKey(c.x, c.y, WHITE);
 
             long double score;
             if (IsFiveAfterPlaced(board, c.x, c.y, WHITE))
@@ -423,7 +586,8 @@ namespace
             }
             else
             {
-                score = Search(board, depth - 1, -INF_SCORE, INF_SCORE, false, candidateLimit);
+                score = Search(board, depth - 1, -INF_SCORE, INF_SCORE, false,
+                    candidateLimit, childHash, table);
             }
 
             board[c.x][c.y] = NONE;

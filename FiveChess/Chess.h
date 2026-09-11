@@ -23,7 +23,7 @@ public:
 
     void Init(CRect rect);
     void Draw(CDC* pDC);
-    void SetPiecePos(CPoint ptCurrent);
+    BOOL SetPiecePos(CPoint ptCurrent);
 
     void NewGame();
     BOOL Regret();
@@ -37,6 +37,7 @@ public:
     BOOL IsBlackTurn() const;
     int GetMoveCount() const;
     CRect GetRectBoard();
+    BOOL GetLastMove(CPoint& point, enumChessColor& color) const;
 
     BOOL SetHoverPoint(CPoint point);
     BOOL ClearHoverPoint();

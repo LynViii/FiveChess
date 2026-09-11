@@ -83,10 +83,10 @@ BOOL CGobang_FiveChessDlg::OnInitDialog()
     SetIcon(m_hIcon, FALSE);
     SetWindowText(_T("FiveChess · 五子棋"));
 
-    m_fontTitle.CreatePointFont(190, _T("Microsoft YaHei UI"));
-    m_fontSubtitle.CreatePointFont(95, _T("Microsoft YaHei UI"));
-    m_fontBody.CreatePointFont(95, _T("Microsoft YaHei UI"));
-    m_fontButton.CreatePointFont(100, _T("Microsoft YaHei UI"));
+    m_fontTitle.CreatePointFont(160, _T("Microsoft YaHei UI"));
+    m_fontSubtitle.CreatePointFont(90, _T("Microsoft YaHei UI"));
+    m_fontBody.CreatePointFont(90, _T("Microsoft YaHei UI"));
+    m_fontButton.CreatePointFont(95, _T("Microsoft YaHei UI"));
 
     const int buttonIds[] = { IDC_BUTTON_GAME_START, IDC_BUTTON_REGRET, IDC_BUTTON_MORE };
     for (int i = 0; i < 3; ++i)
@@ -101,8 +101,8 @@ BOOL CGobang_FiveChessDlg::OnInitDialog()
 
     CRect windowRect;
     GetWindowRect(&windowRect);
-    const int targetWidth = max(820, windowRect.Width());
-    const int targetHeight = max(590, windowRect.Height());
+    const int targetWidth = max(900, windowRect.Width());
+    const int targetHeight = max(640, windowRect.Height());
     SetWindowPos(NULL, 0, 0, targetWidth, targetHeight, SWP_NOMOVE | SWP_NOZORDER);
     CenterWindow();
 
@@ -156,45 +156,37 @@ void CGobang_FiveChessDlg::LayoutScene(int cx, int cy)
     }
 
     const int margin = 24;
-    const int headerHeight = 76;
-    const int gap = 18;
-    const int panelWidth = min(230, max(200, cx / 4));
+    const int headerHeight = 96;
+    const int gap = 22;
+    const int panelWidth = min(300, max(250, cx / 5));
 
     m_rcSidePanel.SetRect(cx - margin - panelWidth, headerHeight, cx - margin, cy - margin);
     m_rcBoardArea.SetRect(margin, headerHeight, m_rcSidePanel.left - gap, cy - margin);
 
-    if (m_rcBoardArea.Width() > 120 && m_rcBoardArea.Height() > 120)
+    if (m_rcBoardArea.Width() > 160 && m_rcBoardArea.Height() > 160)
     {
         m_chess.Init(m_rcBoardArea);
     }
 
-    const int buttonLeft = m_rcSidePanel.left + 20;
-    const int buttonWidth = m_rcSidePanel.Width() - 40;
-    const int buttonHeight = 40;
+    const int buttonLeft = m_rcSidePanel.left + 22;
+    const int buttonWidth = m_rcSidePanel.Width() - 44;
+    const int buttonHeight = 42;
+    const int buttonGap = 10;
+    const int bottomPadding = 20;
 
-    struct ButtonLayout
-    {
-        int id;
-        int offsetFromBottom;
-    };
+    const int thirdY = m_rcSidePanel.bottom - bottomPadding - buttonHeight;
+    const int secondY = thirdY - buttonGap - buttonHeight;
+    const int firstY = secondY - buttonGap - buttonHeight;
 
-    const ButtonLayout layouts[] = {
-        { IDC_BUTTON_GAME_START, 166 },
-        { IDC_BUTTON_REGRET, 114 },
-        { IDC_BUTTON_MORE, 62 }
-    };
+    const int buttonIds[] = { IDC_BUTTON_GAME_START, IDC_BUTTON_REGRET, IDC_BUTTON_MORE };
+    const int buttonY[] = { firstY, secondY, thirdY };
 
     for (int i = 0; i < 3; ++i)
     {
-        CWnd* pButton = GetDlgItem(layouts[i].id);
+        CWnd* pButton = GetDlgItem(buttonIds[i]);
         if (pButton && pButton->GetSafeHwnd())
         {
-            pButton->MoveWindow(
-                buttonLeft,
-                m_rcSidePanel.bottom - layouts[i].offsetFromBottom,
-                buttonWidth,
-                buttonHeight,
-                TRUE);
+            pButton->MoveWindow(buttonLeft, buttonY[i], buttonWidth, buttonHeight, TRUE);
         }
     }
 }
@@ -222,18 +214,27 @@ void CGobang_FiveChessDlg::OnPaint()
     dc.FillSolidRect(client, RGB(246, 247, 245));
     dc.SetBkMode(TRANSPARENT);
 
+    const int headerLeft = 24;
+    const int titleTop = 12;
+
     CFont* oldFont = dc.SelectObject(&m_fontTitle);
     dc.SetTextColor(RGB(31, 43, 38));
-    dc.TextOut(24, 18, _T("FiveChess"));
+    const CString title = _T("FiveChess");
+    dc.TextOut(headerLeft, titleTop, title);
+    const CSize titleSize = dc.GetTextExtent(title);
 
     dc.SelectObject(&m_fontSubtitle);
     dc.SetTextColor(RGB(115, 124, 119));
-    dc.TextOut(25, 49, _T("五子棋 · Alpha-Beta AI"));
+    const CString subtitle = _T("五子棋 · Alpha-Beta AI");
+    const int subtitleTop = titleTop + titleSize.cy + 3;
+    dc.TextOut(headerLeft + 1, subtitleTop, subtitle);
+    const CSize subtitleSize = dc.GetTextExtent(subtitle);
 
+    const int lineY = min(90, subtitleTop + subtitleSize.cy + 10);
     CPen headerLine(PS_SOLID, 1, RGB(226, 230, 227));
     CPen* oldPen = dc.SelectObject(&headerLine);
-    dc.MoveTo(24, 70);
-    dc.LineTo(client.right - 24, 70);
+    dc.MoveTo(headerLeft, lineY);
+    dc.LineTo(client.right - 24, lineY);
     dc.SelectObject(oldPen);
 
     m_chess.Draw(&dc);
@@ -259,14 +260,16 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
     CFont* oldFont = pDC->SelectObject(&m_fontBody);
     pDC->SetTextColor(RGB(42, 52, 47));
 
-    const int x = m_rcSidePanel.left + 20;
+    const int x = m_rcSidePanel.left + 22;
+    const int right = m_rcSidePanel.right - 22;
+    const int valueLeft = x + 90;
     int y = m_rcSidePanel.top + 22;
 
     pDC->SelectObject(&m_fontButton);
     pDC->TextOut(x, y, _T("对局信息"));
-    y += 36;
+    y += 38;
 
-    CRect statusRect(x, y, m_rcSidePanel.right - 20, y + 34);
+    CRect statusRect(x, y, right, y + 38);
     CBrush statusBrush(RGB(40, 81, 65));
     CPen statusPen(PS_SOLID, 1, RGB(40, 81, 65));
     pDC->SelectObject(&statusPen);
@@ -274,41 +277,52 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
     pDC->RoundRect(statusRect, CPoint(12, 12));
     pDC->SetTextColor(RGB(255, 255, 255));
     pDC->SelectObject(&m_fontBody);
-    CString status = GetStatusText();
+    const CString status = GetStatusText();
     pDC->DrawText(status, statusRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     pDC->SelectObject(&borderPen);
     pDC->SelectObject(&panelBrush);
     pDC->SetTextColor(RGB(94, 105, 99));
-    y += 54;
+    y += 58;
 
-    CString line;
-    line.Format(_T("模式        %s"), GetModeText().GetString());
-    pDC->TextOut(x, y, line);
-    y += 30;
+    CString value = GetModeText();
+    CRect labelRect(x, y, valueLeft - 8, y + 24);
+    CRect valueRect(valueLeft, y, right, y + 24);
+    pDC->DrawText(_T("模式"), labelRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    pDC->DrawText(value, valueRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    y += 32;
 
-    line.Format(_T("AI 难度     %s"), GetDifficultyText().GetString());
-    pDC->TextOut(x, y, line);
-    y += 30;
+    value = GetDifficultyText();
+    labelRect.SetRect(x, y, valueLeft - 8, y + 24);
+    valueRect.SetRect(valueLeft, y, right, y + 24);
+    pDC->DrawText(_T("AI 难度"), labelRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    pDC->DrawText(value, valueRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    y += 32;
 
-    line.Format(_T("已落子      %d"), m_chess.GetMoveCount());
-    pDC->TextOut(x, y, line);
-    y += 30;
+    value.Format(_T("%d"), m_chess.GetMoveCount());
+    labelRect.SetRect(x, y, valueLeft - 8, y + 24);
+    valueRect.SetRect(valueLeft, y, right, y + 24);
+    pDC->DrawText(_T("已落子"), labelRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    pDC->DrawText(value, valueRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    y += 32;
 
-    line.Format(_T("可悔棋      %s"), m_chess.CanRegret() ? _T("是") : _T("否"));
-    pDC->TextOut(x, y, line);
+    value = m_chess.CanRegret() ? _T("是") : _T("否");
+    labelRect.SetRect(x, y, valueLeft - 8, y + 24);
+    valueRect.SetRect(valueLeft, y, right, y + 24);
+    pDC->DrawText(_T("可悔棋"), labelRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    pDC->DrawText(value, valueRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
     y += 42;
 
     CPen divider(PS_SOLID, 1, RGB(234, 237, 235));
     pDC->SelectObject(&divider);
     pDC->MoveTo(x, y);
-    pDC->LineTo(m_rcSidePanel.right - 20, y);
+    pDC->LineTo(right, y);
     y += 18;
 
     pDC->SetTextColor(RGB(132, 140, 136));
-    CRect hintRect(x, y, m_rcSidePanel.right - 20, y + 96);
+    CRect hintRect(x, y, right, min(m_rcSidePanel.bottom - 190, y + 110));
     pDC->DrawText(
-        _T("悬停可预览落子位置\n红点标记最近一步\nCtrl+Z 悔棋 · F2 新对局"),
+        _T("悬停预览落子位置\n红点标记最近一步\nCtrl+Z 悔棋\nF2 / Ctrl+N 新对局"),
         hintRect,
         DT_LEFT | DT_TOP | DT_WORDBREAK);
 
@@ -545,6 +559,6 @@ void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
 void CGobang_FiveChessDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
     CDialogEx::OnGetMinMaxInfo(lpMMI);
-    lpMMI->ptMinTrackSize.x = 760;
-    lpMMI->ptMinTrackSize.y = 540;
+    lpMMI->ptMinTrackSize.x = 880;
+    lpMMI->ptMinTrackSize.y = 620;
 }

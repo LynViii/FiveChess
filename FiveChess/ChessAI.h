@@ -1,7 +1,7 @@
 #pragma once
 #include "ChessCommon.h"
 
-
-// Ä¬ÈÏ»úÆ÷Îª°×·½
-BOOL    AIPrimary (POINT &pt ,   enumChessColor emChess[][ROWS]);                // ³õ¼¶AI      
-BOOL    AIHigh    (POINT &pt ,   enumChessColor emChess[][ROWS]);                // ¸ß¼¶AI    
+// AI å›ºå®šæ‰§ç™½ã€‚
+BOOL AIPrimary(POINT& pt, enumChessColor emChess[][ROWS]);
+BOOL AIMiddle(POINT& pt, enumChessColor emChess[][ROWS]);
+BOOL AIHigh(POINT& pt, enumChessColor emChess[][ROWS]);

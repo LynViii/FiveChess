@@ -18,7 +18,7 @@
 - 自适应窗口布局与独立对局信息面板
 - 对局模式、AI 难度、落子数和当前回合实时显示
 - `Ctrl + Z` 快速悔棋，`F2` / `Ctrl + N` 快速开始新对局
-- GitHub Actions 自动验证 `Release | Win32` 构建
+- GitHub Actions 自动完成 `Release | Win32` 构建并生成 Windows 可执行文件
 
 ## 界面与交互
 
@@ -26,7 +26,7 @@
 
 操作区统一为 Owner Draw 圆角按钮；“悔棋”在无可撤销落子时自动禁用。设置窗口只保留实际可用的对战模式与 AI 难度，修改设置后直接开始新对局。
 
-鼠标移动到可落子交叉点时会显示半透明感的棋子预览，双人模式下预览颜色随当前回合切换。
+鼠标移动到可落子交叉点时会显示落子预览，双人模式下预览颜色随当前回合切换。
 
 ## AI
 
@@ -44,12 +44,23 @@ AI 实现在 `FiveChess/ChessAI.cpp`。搜索前先从已有棋子周围生成�
 
 悔棋会同步恢复当前回合、最近一步标记和胜负状态，因此即使已经弹出终局提示，也可以撤销最后一轮继续下棋。
 
+## 直接运行
+
+不需要安装 Visual Studio。仓库的 GitHub Actions 会在 Windows 环境中自动完成 Release 构建，并上传可运行程序。
+
+1. 打开仓库的 **Actions** 页面。
+2. 进入最新一次绿色的 **Windows Build**。
+3. 在页面底部 **Artifacts** 区域下载 `FiveChess-v2.1-Windows`。
+4. 解压后运行 `FiveChess.exe`。
+
+构建产物同时包含 `VERSION.txt` 和简要的 `README.txt`。Artifact 保留 30 天，后续成功构建会重新生成新的下载包。
+
 ## 项目结构
 
 ```text
 FiveChess/
 ├─ FiveChess.sln
-├─ .github/workflows/build.yml          # Windows Release 构建验证
+├─ .github/workflows/build.yml          # Windows 构建与可执行文件打包
 ├─ .gitignore
 ├─ README.md
 └─ FiveChess/
@@ -76,7 +87,7 @@ flowchart LR
     DRAW --> GDI[GDI / 双缓冲]
 ```
 
-## 构建
+## 本地构建
 
 环境：
 

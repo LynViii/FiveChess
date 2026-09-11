@@ -1,0 +1,25 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release Win32
+        run: msbuild FiveChess.sln /m /p:Configuration=Release /p:Platform=Win32 /p:RestorePackages=false

@@ -168,6 +168,53 @@ namespace
         return false;
     }
 
+    bool FindImmediateMove(enumChessColor board[][ROWS], enumChessColor color, POINT& pt)
+    {
+        long double bestPriority = -INF_SCORE;
+        bool found = false;
+
+        for (int x = 0; x < (int)COLUMNS; ++x)
+        {
+            for (int y = 0; y < (int)ROWS; ++y)
+            {
+                if (board[x][y] != NONE)
+                {
+                    continue;
+                }
+
+                board[x][y] = color;
+                const bool wins = IsFiveAfterPlaced(board, x, y, color);
+                board[x][y] = NONE;
+
+                if (!wins)
+                {
+                    continue;
+                }
+
+                const long double priority = MovePatternScore(board, x, y, color);
+                if (!found || priority > bestPriority)
+                {
+                    bestPriority = priority;
+                    pt = CPoint(x, y);
+                    found = true;
+                }
+            }
+        }
+
+        return found;
+    }
+
+    bool FindTacticalMove(enumChessColor board[][ROWS], POINT& pt)
+    {
+        // Finish the game immediately when possible; otherwise stop the
+        // opponent's one-move win before entering the normal search.
+        if (FindImmediateMove(board, WHITE, pt))
+        {
+            return true;
+        }
+        return FindImmediateMove(board, BLACK, pt);
+    }
+
     void BuildCandidates(const enumChessColor board[][ROWS], enumChessColor color,
         int limit, std::vector<Candidate>& out)
     {
@@ -344,6 +391,11 @@ namespace
 
     BOOL ChooseBySearch(POINT& pt, enumChessColor board[][ROWS], int depth, int candidateLimit)
     {
+        if (FindTacticalMove(board, pt))
+        {
+            return TRUE;
+        }
+
         std::vector<Candidate> candidates;
         BuildCandidates(board, WHITE, candidateLimit, candidates);
         if (candidates.empty())
@@ -384,6 +436,11 @@ namespace
 
 BOOL AIPrimary(POINT& pt, enumChessColor emChess[][ROWS])
 {
+    if (FindTacticalMove(emChess, pt))
+    {
+        return TRUE;
+    }
+
     std::vector<Candidate> candidates;
     BuildCandidates(emChess, WHITE, 14, candidates);
     if (candidates.empty())

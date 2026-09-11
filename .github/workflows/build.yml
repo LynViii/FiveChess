@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: fivechess-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-2022
@@ -28,22 +32,22 @@ jobs:
       - name: Prepare Windows package
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path . -Recurse -File -Filter Gobang_FiveChess.exe |
+          $exe = Get-ChildItem -Path . -Recurse -File -Filter FiveChess.exe |
             Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
             Select-Object -First 1
 
           if (-not $exe) {
-            throw 'Gobang_FiveChess.exe was not found after the Release build.'
+            throw 'FiveChess.exe was not found after the Release build.'
           }
 
-          $package = Join-Path $PWD 'artifacts\FiveChess-v2.1-Windows'
+          $package = Join-Path $PWD 'artifacts\FiveChess-v2.2-Windows'
           New-Item -ItemType Directory -Force -Path $package | Out-Null
 
           Copy-Item $exe.FullName (Join-Path $package 'FiveChess.exe')
-          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.1.0' -Encoding ascii
+          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.2.0' -Encoding ascii
 
           @'
-          FiveChess 2.1
+          FiveChess 2.2
           Author: Yuansheng Li (李源晟)
 
           Windows C++ / MFC Gomoku desktop application.
@@ -60,7 +64,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FiveChess-v2.1-Windows
-          path: artifacts/FiveChess-v2.1-Windows
+          name: FiveChess-v2.2-Windows
+          path: artifacts/FiveChess-v2.2-Windows
           if-no-files-found: error
           retention-days: 30

@@ -1,73 +1,75 @@
 # FiveChess
 
-一个基于 **C++ / MFC** 实现的 Windows 五子棋桌面应用，由李源晟完成。项目起于东南大学 2024 年暑期学校课程实践，现已在原有框架上完成界面重构、AI 搜索优化、对局状态完善与仓库工程化整理。
+一个用 **C++ / MFC** 写的 Windows 五子棋程序。项目最初来自东南大学 2024 年暑期学校课程实践，后来继续补了人机对战、界面、自适应布局、悔棋和自动构建等功能。
 
-> 当前版本：**2.1** · Visual Studio 2022 · Win32 · MFC
+> 当前版本：**2.2** · Visual Studio 2022 · Win32 · MFC
 
 ## 功能
 
 - 15 × 15 棋盘与五子连珠胜负判断
-- **人机对战**：玩家执黑，AI 执白
-- **双人对战**：本地黑白双方轮流落子
+- 人机对战：玩家执黑，AI 执白
+- 双人对战：本地黑白双方轮流落子
 - 三档 AI：初级 / 标准 / 高级
-- Alpha-Beta 剪枝、候选点生成、邻域裁剪与走法排序
-- 多步落子历史与稳定悔棋逻辑
-- 终局后仍可悔棋继续对局
-- 最近一步红点标记与获胜连线高亮
-- 棋盘交叉点悬停预览
-- 自适应窗口布局与独立对局信息面板
-- 对局模式、AI 难度、落子数和当前回合实时显示
-- `Ctrl + Z` 快速悔棋，`F2` / `Ctrl + N` 快速开始新对局
-- GitHub Actions 自动完成 `Release | Win32` 构建并生成 Windows 可执行文件
+- Alpha-Beta 剪枝、候选点生成、邻域裁剪和走法排序
+- AI 落子前优先检查一步获胜与一步必防位置
+- 多步落子历史与悔棋
+- 终局后仍可悔棋继续本局
+- 最近一步红点标记、五连获胜线和落子悬停预览
+- A–O / 1–15 棋盘坐标
+- 自适应窗口布局与右侧对局信息面板
+- `Ctrl + Z` 悔棋，`F2` / `Ctrl + N` 开始新对局
+- GitHub Actions 自动构建 `Release | Win32` 并打包 Windows 可执行文件
 
 ## 界面与交互
 
-主窗口采用左侧棋盘、右侧对局信息卡片的布局。棋盘使用木色底面、深色网格和五个标准星位，黑白棋子带有轮廓、阴影与高光。最近一步使用红点标记，形成五连后会额外绘制获胜连线。
+主窗口左侧是棋盘，右侧显示当前状态、对战模式、AI 难度、落子数和是否可以悔棋。棋盘会标记最近一步，形成五连后画出对应连线；鼠标移动到空交叉点时会显示落子预览。
 
-操作区统一为 Owner Draw 圆角按钮；“悔棋”在无可撤销落子时自动禁用。设置窗口只保留实际可用的对战模式与 AI 难度，修改设置后直接开始新对局。
-
-鼠标移动到可落子交叉点时会显示落子预览，双人模式下预览颜色随当前回合切换。
+设置窗口可以切换人机 / 双人模式和 AI 难度。双人模式下 AI 难度会自动禁用，应用设置后直接开始新对局。
 
 ## AI
 
-AI 实现在 `FiveChess/ChessAI.cpp`。搜索前先从已有棋子周围生成候选点，再按照进攻价值、防守价值和中心位置进行排序，避免对 15 × 15 棋盘的全部空点进行无差别搜索。
+AI 代码在 `FiveChess/ChessAI.cpp`。
 
-- **初级**：基于候选点启发式评分直接选点，响应最快
-- **标准**：2 层 Alpha-Beta 搜索，兼顾进攻与防守
-- **高级**：3 层 Alpha-Beta 搜索，并限制高价值候选点数量以控制计算量
+普通搜索前会先做一次直接的战术检查：如果白棋当前有一步可以形成五连，就直接落在获胜点；否则检查黑棋是否存在下一步直接获胜的位置，并优先封堵。没有这种一步战术时，再进入原来的候选点和搜索流程。
 
-局面评分会分别考虑己方成五、活四、冲四、活三等连续棋型，同时将对手在同一位置的潜在威胁纳入候选点优先级。搜索过程优先展开更有价值的走法，以提高 Alpha-Beta 剪枝效率。
+候选点只从已有棋子附近生成，再根据进攻价值、防守价值和中心位置排序，避免每层都遍历 15 × 15 棋盘中的全部空点。
 
-## 悔棋与对局状态
+- **初级**：候选点评分选点，同时保留一步胜 / 一步防判断
+- **标准**：2 层 Alpha-Beta 搜索，候选点上限 10
+- **高级**：3 层 Alpha-Beta 搜索，候选点上限 8
 
-每一步落子都会进入历史记录。双人模式每次撤销一步；人机模式会优先撤销一整个“玩家 + AI”回合，如果玩家刚刚形成胜局、AI 尚未落子，则只撤销玩家最后一步。
+评分主要考虑成五、活四、冲四、活三等连续棋型，同时参考对手在同一位置的威胁。搜索时先展开优先级较高的候选点，以增加 Alpha-Beta 提前剪枝的机会。
 
-悔棋会同步恢复当前回合、最近一步标记和胜负状态，因此即使已经弹出终局提示，也可以撤销最后一轮继续下棋。
+## 悔棋
+
+每一步都会写入落子历史。双人模式一次撤销一步；人机模式一般撤销一整个“玩家 + AI”回合。如果玩家刚落子就已经获胜、AI 还没有走，则只撤销玩家最后一步。
+
+悔棋后会一起恢复当前回合、最近一步和胜负状态，所以终局提示出现后仍然可以撤回继续下。
 
 ## 直接运行
 
-不需要安装 Visual Studio。仓库的 GitHub Actions 会在 Windows 环境中自动完成 Release 构建，并上传可运行程序。
+如果只想运行程序，不需要安装 Visual Studio：
 
 1. 打开仓库的 **Actions** 页面。
-2. 进入最新一次绿色的 **Windows Build**。
-3. 在页面底部 **Artifacts** 区域下载 `FiveChess-v2.1-Windows`。
+2. 进入最新一次成功的 **Windows Build**。
+3. 在 **Artifacts** 下载 `FiveChess-v2.2-Windows`。
 4. 解压后运行 `FiveChess.exe`。
 
-构建产物同时包含 `VERSION.txt` 和简要的 `README.txt`。Artifact 保留 30 天，后续成功构建会重新生成新的下载包。
+构建包内还包含 `VERSION.txt` 和简短的 `README.txt`。Actions artifact 保留 30 天，后续成功构建会重新生成。
 
 ## 项目结构
 
 ```text
-FiveChess/
-├─ FiveChess.sln
-├─ .github/workflows/build.yml          # Windows 构建与可执行文件打包
+FiveChess-MFC/
+├─ .github/workflows/build.yml          # Windows 构建与打包
 ├─ .gitignore
+├─ FiveChess.sln
 ├─ README.md
 └─ FiveChess/
-   ├─ Chess.cpp / Chess.h               # 对局状态、历史记录与主流程
+   ├─ Chess.cpp / Chess.h               # 对局状态、落子、胜负与悔棋
    ├─ ChessAI.cpp / ChessAI.h           # 候选点、评分与 Alpha-Beta AI
-   ├─ ChessCommon.cpp / .h              # 棋型与公共逻辑
-   ├─ ChessDraw.cpp / .h                # 棋盘、棋子、预览与获胜连线
+   ├─ ChessCommon.cpp / .h              # 公共棋型逻辑
+   ├─ ChessDraw.cpp / .h                # 棋盘、棋子、坐标和标记绘制
    ├─ Gobang_FiveChessDlg.cpp / .h      # 主窗口、布局与快捷键
    ├─ DialogMore.cpp / .h               # 对局设置
    ├─ FaceFunc.cpp / .h                 # GDI 绘制辅助
@@ -82,7 +84,7 @@ flowchart LR
     UI[主窗口 / 设置窗口] --> GAME[CChess 对局状态]
     GAME --> HISTORY[落子历史 / 悔棋]
     GAME --> RULE[胜负判断]
-    GAME --> AI[候选点 + Alpha-Beta]
+    GAME --> AI[候选点 + 战术检查 + Alpha-Beta]
     GAME --> DRAW[棋盘 / 棋子 / 标记]
     DRAW --> GDI[GDI / 双缓冲]
 ```
@@ -97,19 +99,9 @@ flowchart LR
 - MFC / ATL support
 - Platform Toolset `v143`
 
-步骤：
+使用 Visual Studio 打开 `FiveChess.sln`，选择 `Debug | Win32` 或 `Release | Win32` 后直接 Build Solution 即可。Release 配置使用静态 MFC，Debug 配置使用动态 MFC。
 
-1. 克隆仓库。
-2. 使用 Visual Studio 打开 `FiveChess.sln`。
-3. 选择 `Debug | Win32` 或 `Release | Win32`。
-4. Build Solution。
-5. 运行生成的 `Gobang_FiveChess.exe`。
-
-Release 配置使用静态 MFC，Debug 配置使用动态 MFC。
-
-## 操作
-
-启动后默认进入人机对战，玩家执黑。点击棋盘交叉点落子，AI 自动完成白棋回合。右侧可以开始新对局、悔棋或打开对局设置。
+## 快捷键
 
 | 操作 | 快捷键 |
 | --- | --- |
@@ -119,6 +111,5 @@ Release 配置使用静态 MFC，Debug 配置使用动态 MFC。
 
 ## 作者
 
-**李源晟**
-
-东南大学 · FiveChess C++ / MFC 项目
+李源晟  
+东南大学

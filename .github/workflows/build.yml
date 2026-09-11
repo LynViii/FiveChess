@@ -36,22 +36,26 @@ jobs:
             throw 'Gobang_FiveChess.exe was not found after the Release build.'
           }
 
-          $package = Join-Path $PWD 'artifacts\FiveChess-v2.1-Windows'
+          $package = Join-Path $PWD 'artifacts\FiveChess-v2.2-Windows'
           New-Item -ItemType Directory -Force -Path $package | Out-Null
 
           Copy-Item $exe.FullName (Join-Path $package 'FiveChess.exe')
-          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.1.0' -Encoding ascii
+          Set-Content -Path (Join-Path $package 'VERSION.txt') -Value '2.2.0' -Encoding ascii
 
           @'
-          FiveChess 2.1
+          FiveChess 2.2
           Author: Yuansheng Li (李源晟)
 
-          Windows C++ / MFC Gomoku desktop application.
+          Native Windows C++ / MFC Gomoku application.
 
           Controls:
           - New game: F2 or Ctrl+N
           - Undo: Ctrl+Z
           - Game settings: use the button in the right panel
+
+          Notes:
+          - Release build uses static MFC runtime.
+          - UTF-8 source compilation and per-monitor DPI awareness are enabled.
           '@ | Set-Content -Path (Join-Path $package 'README.txt') -Encoding utf8
 
           Write-Host "Packaged executable from: $($exe.FullName)"
@@ -60,7 +64,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FiveChess-v2.1-Windows
-          path: artifacts/FiveChess-v2.1-Windows
+          name: FiveChess-v2.2-Windows
+          path: artifacts/FiveChess-v2.2-Windows
           if-no-files-found: error
           retention-days: 30

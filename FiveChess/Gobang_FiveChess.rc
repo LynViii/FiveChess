@@ -1,5 +1,6 @@
 ﻿// Microsoft Visual C++ generated resource script.
 //
+#pragma code_page(65001)
 #include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -56,48 +57,48 @@ IDI_ICON1 ICON "res\\favicon.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 // Dialog
-IDD_ABOUTBOX DIALOGEX 0, 0, 230, 118
+IDD_ABOUTBOX DIALOGEX 0, 0, 236, 120
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "关于 FiveChess"
 FONT 10, "Microsoft YaHei UI", 0, 0, 0x1
 BEGIN
-    LTEXT           "FiveChess 2.1",IDC_STATIC,18,14,130,12,SS_NOPREFIX
-    LTEXT           "C++ / MFC 五子棋桌面应用",IDC_STATIC,18,34,180,10,SS_NOPREFIX
-    LTEXT           "东南大学 2024 暑期学校课程实践",IDC_STATIC,18,53,190,10,SS_NOPREFIX
-    LTEXT           "作者：李源晟",IDC_STATIC,18,69,190,10,SS_NOPREFIX
-    LTEXT           "Alpha-Beta AI · GDI 双缓冲界面",IDC_STATIC,18,85,190,10,SS_NOPREFIX
-    DEFPUSHBUTTON   "确定",IDOK,165,94,48,16,WS_GROUP
+    LTEXT           "FiveChess 2.2",IDC_STATIC,18,14,140,12,SS_NOPREFIX
+    LTEXT           "原生 C++ / MFC 五子棋桌面应用",IDC_STATIC,18,34,196,10,SS_NOPREFIX
+    LTEXT           "东南大学 2024 暑期学校课程实践",IDC_STATIC,18,53,196,10,SS_NOPREFIX
+    LTEXT           "作者：李源晟",IDC_STATIC,18,69,196,10,SS_NOPREFIX
+    LTEXT           "Alpha-Beta AI · GDI 双缓冲渲染",IDC_STATIC,18,85,196,10,SS_NOPREFIX
+    DEFPUSHBUTTON   "确定",IDOK,171,96,48,16,WS_GROUP
 END
 
-IDD_GOBANG_FIVECHESS_DIALOG DIALOGEX 0, 0, 520, 340
+IDD_GOBANG_FIVECHESS_DIALOG DIALOGEX 0, 0, 560, 380
 STYLE DS_SETFONT | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "FiveChess · 五子棋"
 FONT 10, "Microsoft YaHei UI", 0, 0, 0x1
 BEGIN
-    PUSHBUTTON      "新对局",IDC_BUTTON_GAME_START,430,220,68,20,BS_OWNERDRAW | WS_TABSTOP
-    PUSHBUTTON      "悔棋",IDC_BUTTON_REGRET,430,248,68,20,BS_OWNERDRAW | WS_TABSTOP
-    PUSHBUTTON      "对局设置",IDC_BUTTON_MORE,430,276,68,20,BS_OWNERDRAW | WS_TABSTOP
+    PUSHBUTTON      "新对局",IDC_BUTTON_GAME_START,460,250,72,22,BS_OWNERDRAW | WS_TABSTOP
+    PUSHBUTTON      "悔棋",IDC_BUTTON_REGRET,460,280,72,22,BS_OWNERDRAW | WS_TABSTOP
+    PUSHBUTTON      "对局设置",IDC_BUTTON_MORE,460,310,72,22,BS_OWNERDRAW | WS_TABSTOP
 END
 
-IDD_DIALOG_MORE DIALOGEX 0, 0, 252, 120
+IDD_DIALOG_MORE DIALOGEX 0, 0, 270, 128
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "对局设置"
 FONT 10, "Microsoft YaHei UI", 400, 0, 0x1
 BEGIN
-    LTEXT           "对战模式",IDC_STATIC,22,24,48,10
-    COMBOBOX        IDC_COMBO_VS_MODE,88,20,136,78,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "AI 难度",IDC_STATIC,22,53,48,10
-    COMBOBOX        IDC_COMBO_AI,88,49,136,88,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    DEFPUSHBUTTON   "应用并开始新对局",IDOK,72,86,100,18
-    PUSHBUTTON      "取消",IDCANCEL,180,86,44,18
+    LTEXT           "对战模式",IDC_STATIC,22,24,50,10
+    COMBOBOX        IDC_COMBO_VS_MODE,90,20,154,78,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "AI 难度",IDC_STATIC,22,55,50,10
+    COMBOBOX        IDC_COMBO_AI,90,51,154,92,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "应用并开始新对局",IDOK,84,94,104,18
+    PUSHBUTTON      "取消",IDCANCEL,198,94,46,18
 END
 
 /////////////////////////////////////////////////////////////////////////////
 // Version
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,1,0,0
- PRODUCTVERSION 2,1,0,0
+ FILEVERSION 2,2,0,0
+ PRODUCTVERSION 2,2,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -113,13 +114,13 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "Yuansheng Li"
-            VALUE "FileDescription", "FiveChess - C++/MFC Gomoku"
-            VALUE "FileVersion", "2.1.0"
+            VALUE "FileDescription", "FiveChess - Native C++/MFC Gomoku"
+            VALUE "FileVersion", "2.2.0"
             VALUE "InternalName", "Gobang_FiveChess.exe"
             VALUE "LegalCopyright", "Copyright (C) 2024-2026 Yuansheng Li"
             VALUE "OriginalFilename", "Gobang_FiveChess.exe"
             VALUE "ProductName", "FiveChess"
-            VALUE "ProductVersion", "2.1.0"
+            VALUE "ProductVersion", "2.2.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -136,25 +137,25 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 223
+        RIGHTMARGIN, 229
         TOPMARGIN, 7
-        BOTTOMMARGIN, 111
+        BOTTOMMARGIN, 113
     END
 
     IDD_GOBANG_FIVECHESS_DIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 513
+        RIGHTMARGIN, 553
         TOPMARGIN, 7
-        BOTTOMMARGIN, 333
+        BOTTOMMARGIN, 373
     END
 
     IDD_DIALOG_MORE, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 245
+        RIGHTMARGIN, 263
         TOPMARGIN, 7
-        BOTTOMMARGIN, 113
+        BOTTOMMARGIN, 121
     END
 END
 #endif

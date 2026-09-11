@@ -101,22 +101,22 @@ void CChess::PlacePiece(UINT uiCol, UINT uiRow, enumChessColor color)
     m_ptHover = CPoint(-1, -1);
 }
 
-void CChess::SetPiecePos(CPoint ptCurrent)
+BOOL CChess::SetPiecePos(CPoint ptCurrent)
 {
     if (FIGHTING != m_emWin)
     {
-        return;
+        return FALSE;
     }
 
     UINT uiPosX = 0;
     UINT uiPosY = 0;
     if (!m_chessdraw.GetCoordinateWithPoint(ptCurrent, &uiPosX, &uiPosY))
     {
-        return;
+        return FALSE;
     }
     if (NONE != m_iPositionPiece[uiPosX][uiPosY])
     {
-        return;
+        return FALSE;
     }
 
     const enumChessColor playerColor = m_bTurnBlack ? BLACK : WHITE;
@@ -124,13 +124,13 @@ void CChess::SetPiecePos(CPoint ptCurrent)
 
     if (IsWin(uiPosX, uiPosY, playerColor))
     {
-        return;
+        return TRUE;
     }
 
     if ((int)m_moves.size() >= (int)(COLUMNS * ROWS))
     {
         m_emWin = PEACE;
-        return;
+        return TRUE;
     }
 
     m_bTurnBlack = !m_bTurnBlack;
@@ -142,23 +142,25 @@ void CChess::SetPiecePos(CPoint ptCurrent)
         if (!GetBestPosByAI(aiX, aiY))
         {
             m_emWin = PEACE;
-            return;
+            return TRUE;
         }
 
         PlacePiece(aiX, aiY, WHITE);
         if (IsWin(aiX, aiY, WHITE))
         {
-            return;
+            return TRUE;
         }
 
         if ((int)m_moves.size() >= (int)(COLUMNS * ROWS))
         {
             m_emWin = PEACE;
-            return;
+            return TRUE;
         }
 
         m_bTurnBlack = TRUE;
     }
+
+    return TRUE;
 }
 
 enumWinFlag CChess::GetWinFlag() const
@@ -184,6 +186,20 @@ BOOL CChess::IsBlackTurn() const
 int CChess::GetMoveCount() const
 {
     return (int)m_moves.size();
+}
+
+BOOL CChess::GetLastMove(CPoint& point, enumChessColor& color) const
+{
+    if (m_moves.empty())
+    {
+        point = CPoint(-1, -1);
+        color = NONE;
+        return FALSE;
+    }
+
+    point = m_moves.back().pt;
+    color = m_moves.back().color;
+    return TRUE;
 }
 
 BOOL CChess::IsWin(UINT uiCol, UINT uiRow, enumChessColor emChessColor)

@@ -3,6 +3,7 @@
 #include "Gobang_FiveChessDlg.h"
 #include "afxdialogex.h"
 #include "DialogMore.h"
+#include "MyMemDC.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -32,7 +33,10 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 CGobang_FiveChessDlg::CGobang_FiveChessDlg(CWnd* pParent)
-    : CDialogEx(CGobang_FiveChessDlg::IDD, pParent)
+    : CDialogEx(CGobang_FiveChessDlg::IDD, pParent),
+      m_statusTimer(0),
+      m_gameStartTick(0),
+      m_gameEndTick(0)
 {
     m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
@@ -59,7 +63,23 @@ BEGIN_MESSAGE_MAP(CGobang_FiveChessDlg, CDialogEx)
     ON_WM_MOUSEMOVE()
     ON_WM_DRAWITEM()
     ON_WM_GETMINMAXINFO()
+    ON_WM_TIMER()
+    ON_WM_DESTROY()
 END_MESSAGE_MAP()
+
+int CGobang_FiveChessDlg::Scale(int value) const
+{
+    UINT dpi = 96;
+    if (GetSafeHwnd())
+    {
+        const UINT windowDpi = ::GetDpiForWindow(m_hWnd);
+        if (windowDpi > 0)
+        {
+            dpi = windowDpi;
+        }
+    }
+    return MulDiv(value, dpi, 96);
+}
 
 BOOL CGobang_FiveChessDlg::OnInitDialog()
 {
@@ -79,14 +99,16 @@ BOOL CGobang_FiveChessDlg::OnInitDialog()
         }
     }
 
+    ModifyStyle(0, WS_CLIPCHILDREN);
     SetIcon(m_hIcon, TRUE);
     SetIcon(m_hIcon, FALSE);
     SetWindowText(_T("FiveChess · 五子棋"));
 
-    m_fontTitle.CreatePointFont(190, _T("Microsoft YaHei UI"));
-    m_fontSubtitle.CreatePointFont(95, _T("Microsoft YaHei UI"));
-    m_fontBody.CreatePointFont(95, _T("Microsoft YaHei UI"));
-    m_fontButton.CreatePointFont(100, _T("Microsoft YaHei UI"));
+    m_fontTitle.CreatePointFont(205, _T("Microsoft YaHei UI"));
+    m_fontSubtitle.CreatePointFont(90, _T("Microsoft YaHei UI"));
+    m_fontBody.CreatePointFont(94, _T("Microsoft YaHei UI"));
+    m_fontSmall.CreatePointFont(82, _T("Microsoft YaHei UI"));
+    m_fontButton.CreatePointFont(96, _T("Microsoft YaHei UI"));
 
     const int buttonIds[] = { IDC_BUTTON_GAME_START, IDC_BUTTON_REGRET, IDC_BUTTON_MORE };
     for (int i = 0; i < 3; ++i)
@@ -99,17 +121,23 @@ BOOL CGobang_FiveChessDlg::OnInitDialog()
         }
     }
 
-    CRect windowRect;
-    GetWindowRect(&windowRect);
-    const int targetWidth = max(820, windowRect.Width());
-    const int targetHeight = max(590, windowRect.Height());
-    SetWindowPos(NULL, 0, 0, targetWidth, targetHeight, SWP_NOMOVE | SWP_NOZORDER);
+    CRect workArea;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+    const int maxWidth = max(Scale(780), workArea.Width() - Scale(40));
+    const int maxHeight = max(Scale(560), workArea.Height() - Scale(40));
+    const int targetWidth = min(Scale(1060), maxWidth);
+    const int targetHeight = min(Scale(760), maxHeight);
+
+    SetWindowPos(NULL, 0, 0, targetWidth, targetHeight,
+        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     CenterWindow();
 
     CRect client;
     GetClientRect(&client);
     LayoutScene(client.Width(), client.Height());
     UpdateActionState();
+    ResetGameClock();
+    m_statusTimer = SetTimer(1, 1000, NULL);
     return TRUE;
 }
 
@@ -155,46 +183,48 @@ void CGobang_FiveChessDlg::LayoutScene(int cx, int cy)
         return;
     }
 
-    const int margin = 24;
-    const int headerHeight = 76;
-    const int gap = 18;
-    const int panelWidth = min(230, max(200, cx / 4));
+    const int margin = Scale(22);
+    const int headerHeight = Scale(92);
+    const int gap = Scale(20);
+    const int panelMin = Scale(252);
+    const int panelMax = Scale(304);
+    const int panelWidth = min(panelMax, max(panelMin, cx / 4));
 
-    m_rcSidePanel.SetRect(cx - margin - panelWidth, headerHeight, cx - margin, cy - margin);
-    m_rcBoardArea.SetRect(margin, headerHeight, m_rcSidePanel.left - gap, cy - margin);
+    m_rcSidePanel.SetRect(
+        cx - margin - panelWidth,
+        headerHeight,
+        cx - margin,
+        cy - margin);
+    m_rcBoardArea.SetRect(
+        margin,
+        headerHeight,
+        m_rcSidePanel.left - gap,
+        cy - margin);
 
-    if (m_rcBoardArea.Width() > 120 && m_rcBoardArea.Height() > 120)
+    if (m_rcBoardArea.Width() > Scale(160) && m_rcBoardArea.Height() > Scale(160))
     {
         m_chess.Init(m_rcBoardArea);
     }
 
-    const int buttonLeft = m_rcSidePanel.left + 20;
-    const int buttonWidth = m_rcSidePanel.Width() - 40;
-    const int buttonHeight = 40;
+    const int buttonLeft = m_rcSidePanel.left + Scale(18);
+    const int buttonWidth = m_rcSidePanel.Width() - Scale(36);
+    const int buttonHeight = Scale(42);
+    const int buttonGap = Scale(10);
+    const int buttonBottom = m_rcSidePanel.bottom - Scale(18);
 
-    struct ButtonLayout
-    {
-        int id;
-        int offsetFromBottom;
-    };
-
-    const ButtonLayout layouts[] = {
-        { IDC_BUTTON_GAME_START, 166 },
-        { IDC_BUTTON_REGRET, 114 },
-        { IDC_BUTTON_MORE, 62 }
-    };
-
+    const int ids[] = { IDC_BUTTON_MORE, IDC_BUTTON_REGRET, IDC_BUTTON_GAME_START };
     for (int i = 0; i < 3; ++i)
     {
-        CWnd* pButton = GetDlgItem(layouts[i].id);
+        CWnd* pButton = GetDlgItem(ids[i]);
         if (pButton && pButton->GetSafeHwnd())
         {
-            pButton->MoveWindow(
+            const int bottom = buttonBottom - i * (buttonHeight + buttonGap);
+            pButton->SetWindowPos(NULL,
                 buttonLeft,
-                m_rcSidePanel.bottom - layouts[i].offsetFromBottom,
+                bottom - buttonHeight,
                 buttonWidth,
                 buttonHeight,
-                TRUE);
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
         }
     }
 }
@@ -216,24 +246,42 @@ void CGobang_FiveChessDlg::OnPaint()
         return;
     }
 
-    CPaintDC dc(this);
+    CPaintDC paintDC(this);
     CRect client;
     GetClientRect(&client);
-    dc.FillSolidRect(client, RGB(246, 247, 245));
+
+    CMyMemDC dc(&paintDC, &client);
     dc.SetBkMode(TRANSPARENT);
+    dc.FillSolidRect(client, RGB(247, 248, 246));
 
     CFont* oldFont = dc.SelectObject(&m_fontTitle);
-    dc.SetTextColor(RGB(31, 43, 38));
-    dc.TextOut(24, 18, _T("FiveChess"));
+    dc.SetTextColor(RGB(28, 37, 33));
+    CRect titleRect(Scale(24), Scale(13), client.right - Scale(220), Scale(51));
+    dc.DrawText(_T("FiveChess"), titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     dc.SelectObject(&m_fontSubtitle);
-    dc.SetTextColor(RGB(115, 124, 119));
-    dc.TextOut(25, 49, _T("五子棋 · Alpha-Beta AI"));
+    dc.SetTextColor(RGB(105, 115, 110));
+    CRect subtitleRect(Scale(25), Scale(49), client.right - Scale(240), Scale(78));
+    dc.DrawText(_T("C++ / MFC 五子棋 · Alpha-Beta AI"), subtitleRect,
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-    CPen headerLine(PS_SOLID, 1, RGB(226, 230, 227));
-    CPen* oldPen = dc.SelectObject(&headerLine);
-    dc.MoveTo(24, 70);
-    dc.LineTo(client.right - 24, 70);
+    CRect badgeRect(client.right - Scale(184), Scale(23), client.right - Scale(24), Scale(57));
+    CPen badgePen(PS_SOLID, 1, RGB(216, 224, 219));
+    CBrush badgeBrush(RGB(239, 244, 241));
+    CPen* oldPen = dc.SelectObject(&badgePen);
+    CBrush* oldBrush = dc.SelectObject(&badgeBrush);
+    dc.RoundRect(badgeRect, CPoint(Scale(12), Scale(12)));
+    dc.SelectObject(&m_fontSmall);
+    dc.SetTextColor(RGB(54, 86, 72));
+    dc.DrawText(_T("Native C++ · v2.2"), badgeRect,
+        DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    CPen headerLine(PS_SOLID, 1, RGB(225, 230, 227));
+    dc.SelectObject(&headerLine);
+    dc.MoveTo(Scale(24), Scale(82));
+    dc.LineTo(client.right - Scale(24), Scale(82));
+
+    dc.SelectObject(oldBrush);
     dc.SelectObject(oldPen);
 
     m_chess.Draw(&dc);
@@ -249,68 +297,88 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
         return;
     }
 
-    CPen borderPen(PS_SOLID, 1, RGB(222, 227, 223));
+    CPen borderPen(PS_SOLID, 1, RGB(220, 226, 222));
     CBrush panelBrush(RGB(255, 255, 255));
     CPen* oldPen = pDC->SelectObject(&borderPen);
     CBrush* oldBrush = pDC->SelectObject(&panelBrush);
-    pDC->RoundRect(m_rcSidePanel, CPoint(18, 18));
+    pDC->RoundRect(m_rcSidePanel, CPoint(Scale(18), Scale(18)));
 
     pDC->SetBkMode(TRANSPARENT);
     CFont* oldFont = pDC->SelectObject(&m_fontBody);
-    pDC->SetTextColor(RGB(42, 52, 47));
 
-    const int x = m_rcSidePanel.left + 20;
-    int y = m_rcSidePanel.top + 22;
+    const int left = m_rcSidePanel.left + Scale(20);
+    const int right = m_rcSidePanel.right - Scale(20);
+    int y = m_rcSidePanel.top + Scale(20);
 
+    pDC->SetTextColor(RGB(39, 49, 44));
     pDC->SelectObject(&m_fontButton);
-    pDC->TextOut(x, y, _T("对局信息"));
-    y += 36;
+    CRect sectionTitle(left, y, right, y + Scale(24));
+    pDC->DrawText(_T("对局状态"), sectionTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    y += Scale(34);
 
-    CRect statusRect(x, y, m_rcSidePanel.right - 20, y + 34);
-    CBrush statusBrush(RGB(40, 81, 65));
-    CPen statusPen(PS_SOLID, 1, RGB(40, 81, 65));
+    CRect statusRect(left, y, right, y + Scale(40));
+    COLORREF statusColor = RGB(45, 91, 72);
+    if (m_chess.GetWinFlag() != FIGHTING)
+    {
+        statusColor = RGB(151, 94, 49);
+    }
+    CPen statusPen(PS_SOLID, 1, statusColor);
+    CBrush statusBrush(statusColor);
     pDC->SelectObject(&statusPen);
     pDC->SelectObject(&statusBrush);
-    pDC->RoundRect(statusRect, CPoint(12, 12));
-    pDC->SetTextColor(RGB(255, 255, 255));
+    pDC->RoundRect(statusRect, CPoint(Scale(12), Scale(12)));
     pDC->SelectObject(&m_fontBody);
-    CString status = GetStatusText();
-    pDC->DrawText(status, statusRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    pDC->SetTextColor(RGB(255, 255, 255));
+    pDC->DrawText(GetStatusText(), statusRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     pDC->SelectObject(&borderPen);
     pDC->SelectObject(&panelBrush);
-    pDC->SetTextColor(RGB(94, 105, 99));
-    y += 54;
+    y += Scale(54);
 
-    CString line;
-    line.Format(_T("模式        %s"), GetModeText().GetString());
-    pDC->TextOut(x, y, line);
-    y += 30;
+    const int rowHeight = Scale(31);
+    const int labelWidth = Scale(74);
 
-    line.Format(_T("AI 难度     %s"), GetDifficultyText().GetString());
-    pDC->TextOut(x, y, line);
-    y += 30;
+    auto drawRow = [&](LPCTSTR label, const CString& value)
+    {
+        CRect labelRect(left, y, left + labelWidth, y + rowHeight);
+        CRect valueRect(left + labelWidth, y, right, y + rowHeight);
 
-    line.Format(_T("已落子      %d"), m_chess.GetMoveCount());
-    pDC->TextOut(x, y, line);
-    y += 30;
+        pDC->SelectObject(&m_fontSmall);
+        pDC->SetTextColor(RGB(135, 144, 139));
+        pDC->DrawText(label, labelRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-    line.Format(_T("可悔棋      %s"), m_chess.CanRegret() ? _T("是") : _T("否"));
-    pDC->TextOut(x, y, line);
-    y += 42;
+        pDC->SelectObject(&m_fontBody);
+        pDC->SetTextColor(RGB(52, 62, 57));
+        pDC->DrawText(value, valueRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        y += rowHeight;
+    };
 
-    CPen divider(PS_SOLID, 1, RGB(234, 237, 235));
+    CString moveCount;
+    moveCount.Format(_T("%d"), m_chess.GetMoveCount());
+    drawRow(_T("模式"), GetModeText());
+    drawRow(_T("AI 难度"), GetDifficultyText());
+    drawRow(_T("落子数"), moveCount);
+    drawRow(_T("最近一步"), GetLastMoveText());
+    drawRow(_T("本局用时"), GetElapsedText());
+
+    y += Scale(8);
+    CPen divider(PS_SOLID, 1, RGB(235, 238, 236));
     pDC->SelectObject(&divider);
-    pDC->MoveTo(x, y);
-    pDC->LineTo(m_rcSidePanel.right - 20, y);
-    y += 18;
+    pDC->MoveTo(left, y);
+    pDC->LineTo(right, y);
+    y += Scale(14);
 
-    pDC->SetTextColor(RGB(132, 140, 136));
-    CRect hintRect(x, y, m_rcSidePanel.right - 20, y + 96);
-    pDC->DrawText(
-        _T("悬停可预览落子位置\n红点标记最近一步\nCtrl+Z 悔棋 · F2 新对局"),
-        hintRect,
-        DT_LEFT | DT_TOP | DT_WORDBREAK);
+    const int controlsTop = m_rcSidePanel.bottom - Scale(176);
+    if (controlsTop > y + Scale(38))
+    {
+        pDC->SelectObject(&m_fontSmall);
+        pDC->SetTextColor(RGB(128, 138, 132));
+        CRect hintRect(left, y, right, controlsTop - Scale(10));
+        pDC->DrawText(
+            _T("悬停交叉点可预览落子\n红点表示最近一步，胜局显示连线\nCtrl + Z 悔棋 · F2 新对局"),
+            hintRect,
+            DT_LEFT | DT_TOP | DT_WORDBREAK);
+    }
 
     pDC->SelectObject(oldFont);
     pDC->SelectObject(oldBrush);
@@ -323,6 +391,24 @@ void CGobang_FiveChessDlg::UpdateActionState()
     if (pUndo && pUndo->GetSafeHwnd())
     {
         pUndo->EnableWindow(m_chess.CanRegret());
+    }
+}
+
+void CGobang_FiveChessDlg::ResetGameClock()
+{
+    m_gameStartTick = GetTickCount64();
+    m_gameEndTick = 0;
+}
+
+void CGobang_FiveChessDlg::InvalidateGameView(BOOL includeSidebar)
+{
+    if (!m_rcBoardArea.IsRectEmpty())
+    {
+        InvalidateRect(&m_rcBoardArea, FALSE);
+    }
+    if (includeSidebar && !m_rcSidePanel.IsRectEmpty())
+    {
+        InvalidateRect(&m_rcSidePanel, FALSE);
     }
 }
 
@@ -370,10 +456,43 @@ CString CGobang_FiveChessDlg::GetStatusText() const
     default:
         if (m_chess.GetVSMode() == PERSON_VS_MACHINE)
         {
-            return _T("轮到你 · 黑棋");
+            return _T("你的回合 · 黑棋");
         }
         return m_chess.IsBlackTurn() ? _T("黑棋回合") : _T("白棋回合");
     }
+}
+
+CString CGobang_FiveChessDlg::GetElapsedText() const
+{
+    if (m_gameStartTick == 0)
+    {
+        return _T("00:00");
+    }
+
+    const ULONGLONG endTick = (m_gameEndTick != 0) ? m_gameEndTick : GetTickCount64();
+    const DWORD totalSeconds = (DWORD)((endTick - m_gameStartTick) / 1000);
+    const int minutes = (int)(totalSeconds / 60);
+    const int seconds = (int)(totalSeconds % 60);
+
+    CString text;
+    text.Format(_T("%02d:%02d"), minutes, seconds);
+    return text;
+}
+
+CString CGobang_FiveChessDlg::GetLastMoveText() const
+{
+    CPoint point;
+    enumChessColor color = NONE;
+    if (!m_chess.GetLastMove(point, color))
+    {
+        return _T("—");
+    }
+
+    const TCHAR column = (TCHAR)(_T('A') + point.x);
+    CString text;
+    text.Format(_T("%c%d · %s"), column, point.y + 1,
+        color == BLACK ? _T("黑") : _T("白"));
+    return text;
 }
 
 HCURSOR CGobang_FiveChessDlg::OnQueryDragIcon()
@@ -383,30 +502,46 @@ HCURSOR CGobang_FiveChessDlg::OnQueryDragIcon()
 
 void CGobang_FiveChessDlg::OnLButtonUp(UINT nFlags, CPoint point)
 {
-    if (!m_chess.GetRectBoard().PtInRect(point))
+    if (!m_rcBoardArea.PtInRect(point))
     {
         CDialogEx::OnLButtonUp(nFlags, point);
         return;
     }
 
     const enumWinFlag before = m_chess.GetWinFlag();
-    m_chess.SetPiecePos(point);
+    {
+        CWaitCursor wait;
+        if (!m_chess.SetPiecePos(point))
+        {
+            CDialogEx::OnLButtonUp(nFlags, point);
+            return;
+        }
+    }
+
     const enumWinFlag after = m_chess.GetWinFlag();
+    if (before == FIGHTING && after != FIGHTING)
+    {
+        m_gameEndTick = GetTickCount64();
+    }
+
     UpdateActionState();
-    Invalidate(FALSE);
+    InvalidateGameView(TRUE);
+    UpdateWindow();
 
     if (before == FIGHTING && after != FIGHTING)
     {
         switch (after)
         {
         case WHITE_WIN:
-            AfxMessageBox(_T("白棋获胜。可以悔棋继续本局，或开始新对局。"), MB_OK | MB_ICONINFORMATION);
+            AfxMessageBox(_T("白棋获胜！你可以悔棋继续本局，或开始新对局。"),
+                MB_OK | MB_ICONINFORMATION);
             break;
         case BLACK_WIN:
-            AfxMessageBox(_T("黑棋获胜。可以悔棋继续本局，或开始新对局。"), MB_OK | MB_ICONINFORMATION);
+            AfxMessageBox(_T("黑棋获胜！你可以悔棋继续本局，或开始新对局。"),
+                MB_OK | MB_ICONINFORMATION);
             break;
         case PEACE:
-            AfxMessageBox(_T("本局平局。"), MB_OK | MB_ICONINFORMATION);
+            AfxMessageBox(_T("棋盘已满，本局平局。"), MB_OK | MB_ICONINFORMATION);
             break;
         default:
             break;
@@ -418,14 +553,16 @@ void CGobang_FiveChessDlg::OnLButtonUp(UINT nFlags, CPoint point)
 
 BOOL CGobang_FiveChessDlg::OnEraseBkgnd(CDC* pDC)
 {
+    UNREFERENCED_PARAMETER(pDC);
     return TRUE;
 }
 
 void CGobang_FiveChessDlg::OnBnClickedButtonGameStart()
 {
     m_chess.NewGame();
+    ResetGameClock();
     UpdateActionState();
-    Invalidate(FALSE);
+    InvalidateGameView(TRUE);
 }
 
 void CGobang_FiveChessDlg::OnBnClickedButtonRegret()
@@ -435,8 +572,12 @@ void CGobang_FiveChessDlg::OnBnClickedButtonRegret()
         return;
     }
 
+    if (m_chess.GetWinFlag() == FIGHTING)
+    {
+        m_gameEndTick = 0;
+    }
     UpdateActionState();
-    Invalidate(FALSE);
+    InvalidateGameView(TRUE);
 }
 
 void CGobang_FiveChessDlg::OnBnClickedButtonMore()
@@ -446,8 +587,9 @@ void CGobang_FiveChessDlg::OnBnClickedButtonMore()
     if (dlgMore.DoModal() == IDOK)
     {
         m_chess.NewGame();
+        ResetGameClock();
         UpdateActionState();
-        Invalidate(FALSE);
+        InvalidateGameView(TRUE);
     }
 }
 
@@ -475,9 +617,9 @@ void CGobang_FiveChessDlg::OnMouseMove(UINT nFlags, CPoint point)
         changed = m_chess.ClearHoverPoint();
     }
 
-    if (changed)
+    if (changed && !m_rcBoardArea.IsRectEmpty())
     {
-        Invalidate(FALSE);
+        InvalidateRect(&m_rcBoardArea, FALSE);
     }
 
     CDialogEx::OnMouseMove(nFlags, point);
@@ -501,18 +643,18 @@ void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
     const BOOL isPressed = (lpDrawItemStruct->itemState & ODS_SELECTED) != 0;
     const BOOL isDisabled = (lpDrawItemStruct->itemState & ODS_DISABLED) != 0;
 
-    COLORREF fill = isPrimary ? RGB(40, 81, 65) : RGB(248, 249, 248);
-    COLORREF border = isPrimary ? RGB(40, 81, 65) : RGB(217, 223, 219);
-    COLORREF text = isPrimary ? RGB(255, 255, 255) : RGB(55, 67, 61);
+    COLORREF fill = isPrimary ? RGB(45, 91, 72) : RGB(249, 250, 249);
+    COLORREF border = isPrimary ? RGB(45, 91, 72) : RGB(215, 222, 218);
+    COLORREF text = isPrimary ? RGB(255, 255, 255) : RGB(54, 65, 59);
 
     if (isPressed)
     {
-        fill = isPrimary ? RGB(31, 65, 52) : RGB(235, 238, 236);
+        fill = isPrimary ? RGB(34, 73, 57) : RGB(235, 239, 236);
     }
     if (isDisabled)
     {
-        fill = RGB(240, 242, 241);
-        border = RGB(226, 229, 227);
+        fill = RGB(241, 243, 242);
+        border = RGB(228, 231, 229);
         text = RGB(166, 173, 169);
     }
 
@@ -520,7 +662,7 @@ void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
     CBrush brush(fill);
     CPen* oldPen = dc.SelectObject(&pen);
     CBrush* oldBrush = dc.SelectObject(&brush);
-    dc.RoundRect(rc, CPoint(12, 12));
+    dc.RoundRect(rc, CPoint(Scale(11), Scale(11)));
 
     CString label;
     GetDlgItem(nIDCtl)->GetWindowText(label);
@@ -532,7 +674,7 @@ void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
     if (lpDrawItemStruct->itemState & ODS_FOCUS)
     {
         CRect focus = rc;
-        focus.DeflateRect(4, 4);
+        focus.DeflateRect(Scale(4), Scale(4));
         dc.DrawFocusRect(focus);
     }
 
@@ -545,6 +687,28 @@ void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
 void CGobang_FiveChessDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
     CDialogEx::OnGetMinMaxInfo(lpMMI);
-    lpMMI->ptMinTrackSize.x = 760;
-    lpMMI->ptMinTrackSize.y = 540;
+    lpMMI->ptMinTrackSize.x = Scale(800);
+    lpMMI->ptMinTrackSize.y = Scale(600);
+}
+
+void CGobang_FiveChessDlg::OnTimer(UINT_PTR nIDEvent)
+{
+    if (nIDEvent == m_statusTimer && m_chess.GetWinFlag() == FIGHTING)
+    {
+        if (!m_rcSidePanel.IsRectEmpty())
+        {
+            InvalidateRect(&m_rcSidePanel, FALSE);
+        }
+    }
+    CDialogEx::OnTimer(nIDEvent);
+}
+
+void CGobang_FiveChessDlg::OnDestroy()
+{
+    if (m_statusTimer != 0)
+    {
+        KillTimer(m_statusTimer);
+        m_statusTimer = 0;
+    }
+    CDialogEx::OnDestroy();
 }

@@ -21,14 +21,25 @@ protected:
     CFont m_fontTitle;
     CFont m_fontSubtitle;
     CFont m_fontBody;
+    CFont m_fontSmall;
     CFont m_fontButton;
 
+    UINT_PTR m_statusTimer;
+    ULONGLONG m_gameStartTick;
+    ULONGLONG m_gameEndTick;
+
+    int Scale(int value) const;
     void LayoutScene(int cx, int cy);
     void DrawSidebar(CDC* pDC);
     void UpdateActionState();
+    void ResetGameClock();
+    void InvalidateGameView(BOOL includeSidebar = TRUE);
+
     CString GetModeText() const;
     CString GetDifficultyText() const;
     CString GetStatusText() const;
+    CString GetElapsedText() const;
+    CString GetLastMoveText() const;
 
     afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
     afx_msg void OnPaint();
@@ -42,6 +53,8 @@ protected:
     afx_msg void OnMouseMove(UINT nFlags, CPoint point);
     afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
     afx_msg void OnGetMinMaxInfo(MINMAXINFO* lpMMI);
+    afx_msg void OnTimer(UINT_PTR nIDEvent);
+    afx_msg void OnDestroy();
 
     DECLARE_MESSAGE_MAP()
 };

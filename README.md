@@ -1,60 +1,67 @@
 # FiveChess
 
-一个基于 **C++ / MFC** 实现的 Windows 五子棋桌面应用。项目最初来自东南大学 2024 年暑期学校课程实践，现保留原有棋局、AI 与 MFC 框架，在此基础上重新整理界面、交互和仓库结构。
+一个基于 **C++ / MFC** 实现的 Windows 五子棋桌面应用，由李源晟完成。项目起于东南大学 2024 年暑期学校课程实践，现已在原有框架上完成界面重构、AI 搜索优化、对局状态完善与仓库工程化整理。
 
-> 当前版本：**2.0** · Visual Studio 2022 · Win32 · MFC
+> 当前版本：**2.1** · Visual Studio 2022 · Win32 · MFC
 
 ## 功能
 
-- 15 × 15 标准棋盘与五子连珠胜负判断
+- 15 × 15 棋盘与五子连珠胜负判断
 - **人机对战**：玩家执黑，AI 执白
 - **双人对战**：本地黑白双方轮流落子
-- 两档 AI：初级 / 高级
-- AI 基于局面评分与 **Alpha-Beta 剪枝**
-- 单步悔棋与一键开始新对局
-- 最近一步红点标记
+- 三档 AI：初级 / 标准 / 高级
+- Alpha-Beta 剪枝、候选点生成、邻域裁剪与走法排序
+- 多步落子历史与稳定悔棋逻辑
+- 终局后仍可悔棋继续对局
+- 最近一步红点标记与获胜连线高亮
+- 棋盘交叉点悬停预览
 - 自适应窗口布局与独立对局信息面板
 - 对局模式、AI 难度、落子数和当前回合实时显示
+- `Ctrl + Z` 快速悔棋，`F2` / `Ctrl + N` 快速开始新对局
+- GitHub Actions 自动验证 `Release | Win32` 构建
 
-## 2.0 界面重构
+## 界面与交互
 
-早期版本采用默认 MFC 控件、粉橙渐变背景和固定按钮布局。2.0 保留原有项目结构，但对显示层重新设计：
+主窗口采用左侧棋盘、右侧对局信息卡片的布局。棋盘使用木色底面、深色网格和五个标准星位，黑白棋子带有轮廓、阴影与高光。最近一步使用红点标记，形成五连后会额外绘制获胜连线。
 
-- 棋盘改为克制的木色棋盘 + 深色网格
-- 黑白棋子重新绘制，增加轮廓、阴影与高光
-- 主窗口采用浅灰背景与白色信息卡片
-- 主操作区统一为圆角 Owner Draw 按钮
-- 设置窗口改为模态对话框，切换模式后自动开始新对局
-- 去除未完成的 AI 档位和不完整的“机器对机器”入口
-- 修正胜负提示文案、重复弹窗和设置窗口对象泄漏问题
+操作区统一为 Owner Draw 圆角按钮；“悔棋”在无可撤销落子时自动禁用。设置窗口只保留实际可用的对战模式与 AI 难度，修改设置后直接开始新对局。
 
-构建完成后建议在 `docs/` 下加入一张最新界面截图，并放在 README 顶部作为项目封面。
+鼠标移动到可落子交叉点时会显示半透明感的棋子预览，双人模式下预览颜色随当前回合切换。
 
-## AI 实现
+## AI
 
-AI 代码位于 `FiveChess/ChessAI.cpp`。项目通过棋型评分函数评估当前局面，并使用 Alpha-Beta 搜索选择下一步位置。
+AI 实现在 `FiveChess/ChessAI.cpp`。搜索前先从已有棋子周围生成候选点，再按照进攻价值、防守价值和中心位置进行排序，避免对 15 × 15 棋盘的全部空点进行无差别搜索。
 
-- **初级**：1 层搜索，响应更快
-- **高级**：2 层 Alpha-Beta 搜索，考虑更多后续局面
+- **初级**：基于候选点启发式评分直接选点，响应最快
+- **标准**：2 层 Alpha-Beta 搜索，兼顾进攻与防守
+- **高级**：3 层 Alpha-Beta 搜索，并限制高价值候选点数量以控制计算量
 
-这个实现以课程项目的可读性和完整性为主，并不是竞技级五子棋 AI。后续可以继续加入候选点剪枝、活三/冲四棋型识别、禁手规则和更深层搜索。
+局面评分会分别考虑己方成五、活四、冲四、活三等连续棋型，同时将对手在同一位置的潜在威胁纳入候选点优先级。搜索过程优先展开更有价值的走法，以提高 Alpha-Beta 剪枝效率。
+
+## 悔棋与对局状态
+
+每一步落子都会进入历史记录。双人模式每次撤销一步；人机模式会优先撤销一整个“玩家 + AI”回合，如果玩家刚刚形成胜局、AI 尚未落子，则只撤销玩家最后一步。
+
+悔棋会同步恢复当前回合、最近一步标记和胜负状态，因此即使已经弹出终局提示，也可以撤销最后一轮继续下棋。
 
 ## 项目结构
 
 ```text
 FiveChess/
 ├─ FiveChess.sln
-├─ FiveChess/
-│  ├─ Chess.cpp / Chess.h              # 对局状态与主流程
-│  ├─ ChessAI.cpp / ChessAI.h          # 局面评分与 Alpha-Beta AI
-│  ├─ ChessCommon.cpp / .h             # 棋型与公共逻辑
-│  ├─ ChessDraw.cpp / .h               # 棋盘、棋子与最近一步绘制
-│  ├─ Gobang_FiveChessDlg.cpp / .h     # 主窗口与现代化布局
-│  ├─ DialogMore.cpp / .h              # 对局设置
-│  ├─ FaceFunc.cpp / .h                # GDI 绘制辅助
-│  ├─ MyMemDC.h                        # 双缓冲绘制
-│  └─ res/                              # 图标与资源
-└─ .gitignore
+├─ .github/workflows/build.yml          # Windows Release 构建验证
+├─ .gitignore
+├─ README.md
+└─ FiveChess/
+   ├─ Chess.cpp / Chess.h               # 对局状态、历史记录与主流程
+   ├─ ChessAI.cpp / ChessAI.h           # 候选点、评分与 Alpha-Beta AI
+   ├─ ChessCommon.cpp / .h              # 棋型与公共逻辑
+   ├─ ChessDraw.cpp / .h                # 棋盘、棋子、预览与获胜连线
+   ├─ Gobang_FiveChessDlg.cpp / .h      # 主窗口、布局与快捷键
+   ├─ DialogMore.cpp / .h               # 对局设置
+   ├─ FaceFunc.cpp / .h                 # GDI 绘制辅助
+   ├─ MyMemDC.h                         # 双缓冲绘制
+   └─ res/                               # 图标与资源
 ```
 
 ## 模块关系
@@ -62,15 +69,16 @@ FiveChess/
 ```mermaid
 flowchart LR
     UI[主窗口 / 设置窗口] --> GAME[CChess 对局状态]
-    GAME --> RULE[ChessCommon 胜负与棋型逻辑]
-    GAME --> AI[ChessAI Alpha-Beta]
-    GAME --> DRAW[ChessDraw 棋盘与棋子]
-    DRAW --> GDI[GDI / 双缓冲绘制]
+    GAME --> HISTORY[落子历史 / 悔棋]
+    GAME --> RULE[胜负判断]
+    GAME --> AI[候选点 + Alpha-Beta]
+    GAME --> DRAW[棋盘 / 棋子 / 标记]
+    DRAW --> GDI[GDI / 双缓冲]
 ```
 
 ## 构建
 
-### 环境
+环境：
 
 - Windows 10 / 11
 - Visual Studio 2022
@@ -78,7 +86,7 @@ flowchart LR
 - MFC / ATL support
 - Platform Toolset `v143`
 
-### 步骤
+步骤：
 
 1. 克隆仓库。
 2. 使用 Visual Studio 打开 `FiveChess.sln`。
@@ -88,25 +96,18 @@ flowchart LR
 
 Release 配置使用静态 MFC，Debug 配置使用动态 MFC。
 
-## 操作说明
+## 操作
 
-启动后默认进入人机对战，玩家执黑。点击棋盘交叉点落子，AI 会自动完成白棋回合。右侧面板可开始新对局、悔棋或进入对局设置。切换对战模式或 AI 难度后，会自动清空棋盘并开始新对局。
+启动后默认进入人机对战，玩家执黑。点击棋盘交叉点落子，AI 自动完成白棋回合。右侧可以开始新对局、悔棋或打开对局设置。
 
-## 原项目与维护
+| 操作 | 快捷键 |
+| --- | --- |
+| 新对局 | `F2` 或 `Ctrl + N` |
+| 悔棋 | `Ctrl + Z` |
+| 对局设置 | 右侧“对局设置”按钮 |
 
-该项目最初为 **东南大学 2024 年暑期学校 MFC 课程项目**。
+## 作者
 
-原始项目成员：赵紫涵、李源晟、高艺萌。原代码分别包含图形界面与交互、AI、游戏逻辑等内容。2026 年版本在原项目基础上进行 UI、交互和仓库工程化整理，并保留原项目的课程实践属性与成员署名。
+**李源晟**
 
-## 后续可以继续做
-
-- AI 候选点生成与搜索剪枝
-- 更完整的棋型评分系统
-- 禁手 / Renju 规则
-- 落子音效与动画
-- 对局计时与历史记录
-- Release 可执行文件与 GitHub Actions 自动构建
-
----
-
-**FiveChess** is a small MFC project, but the goal of the refreshed version is to keep it clean, understandable and complete rather than turn it into an oversized framework.
+东南大学 · FiveChess C++ / MFC 项目

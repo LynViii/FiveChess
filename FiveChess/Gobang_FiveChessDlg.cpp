@@ -109,7 +109,30 @@ BOOL CGobang_FiveChessDlg::OnInitDialog()
     CRect client;
     GetClientRect(&client);
     LayoutScene(client.Width(), client.Height());
+    UpdateActionState();
     return TRUE;
+}
+
+BOOL CGobang_FiveChessDlg::PreTranslateMessage(MSG* pMsg)
+{
+    if (pMsg && pMsg->message == WM_KEYDOWN)
+    {
+        const BOOL ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+
+        if (pMsg->wParam == VK_F2 || (ctrl && (pMsg->wParam == 'N' || pMsg->wParam == 'n')))
+        {
+            OnBnClickedButtonGameStart();
+            return TRUE;
+        }
+
+        if (ctrl && (pMsg->wParam == 'Z' || pMsg->wParam == 'z'))
+        {
+            OnBnClickedButtonRegret();
+            return TRUE;
+        }
+    }
+
+    return CDialogEx::PreTranslateMessage(pMsg);
 }
 
 void CGobang_FiveChessDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -135,7 +158,7 @@ void CGobang_FiveChessDlg::LayoutScene(int cx, int cy)
     const int margin = 24;
     const int headerHeight = 76;
     const int gap = 18;
-    int panelWidth = min(220, max(190, cx / 4));
+    const int panelWidth = min(230, max(200, cx / 4));
 
     m_rcSidePanel.SetRect(cx - margin - panelWidth, headerHeight, cx - margin, cy - margin);
     m_rcBoardArea.SetRect(margin, headerHeight, m_rcSidePanel.left - gap, cy - margin);
@@ -166,8 +189,12 @@ void CGobang_FiveChessDlg::LayoutScene(int cx, int cy)
         CWnd* pButton = GetDlgItem(layouts[i].id);
         if (pButton && pButton->GetSafeHwnd())
         {
-            pButton->MoveWindow(buttonLeft, m_rcSidePanel.bottom - layouts[i].offsetFromBottom,
-                buttonWidth, buttonHeight, TRUE);
+            pButton->MoveWindow(
+                buttonLeft,
+                m_rcSidePanel.bottom - layouts[i].offsetFromBottom,
+                buttonWidth,
+                buttonHeight,
+                TRUE);
         }
     }
 }
@@ -179,12 +206,12 @@ void CGobang_FiveChessDlg::OnPaint()
         CPaintDC dc(this);
         SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-        int cxIcon = GetSystemMetrics(SM_CXICON);
-        int cyIcon = GetSystemMetrics(SM_CYICON);
+        const int cxIcon = GetSystemMetrics(SM_CXICON);
+        const int cyIcon = GetSystemMetrics(SM_CYICON);
         CRect rect;
         GetClientRect(&rect);
-        int x = (rect.Width() - cxIcon + 1) / 2;
-        int y = (rect.Height() - cyIcon + 1) / 2;
+        const int x = (rect.Width() - cxIcon + 1) / 2;
+        const int y = (rect.Height() - cyIcon + 1) / 2;
         dc.DrawIcon(x, y, m_hIcon);
         return;
     }
@@ -201,7 +228,7 @@ void CGobang_FiveChessDlg::OnPaint()
 
     dc.SelectObject(&m_fontSubtitle);
     dc.SetTextColor(RGB(115, 124, 119));
-    dc.TextOut(25, 49, _T("简洁、专注的五子棋对局"));
+    dc.TextOut(25, 49, _T("五子棋 · Alpha-Beta AI"));
 
     CPen headerLine(PS_SOLID, 1, RGB(226, 230, 227));
     CPen* oldPen = dc.SelectObject(&headerLine);
@@ -232,7 +259,7 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
     CFont* oldFont = pDC->SelectObject(&m_fontBody);
     pDC->SetTextColor(RGB(42, 52, 47));
 
-    int x = m_rcSidePanel.left + 20;
+    const int x = m_rcSidePanel.left + 20;
     int y = m_rcSidePanel.top + 22;
 
     pDC->SelectObject(&m_fontButton);
@@ -266,6 +293,10 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
 
     line.Format(_T("已落子      %d"), m_chess.GetMoveCount());
     pDC->TextOut(x, y, line);
+    y += 30;
+
+    line.Format(_T("可悔棋      %s"), m_chess.CanRegret() ? _T("是") : _T("否"));
+    pDC->TextOut(x, y, line);
     y += 42;
 
     CPen divider(PS_SOLID, 1, RGB(234, 237, 235));
@@ -275,13 +306,24 @@ void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
     y += 18;
 
     pDC->SetTextColor(RGB(132, 140, 136));
-    CRect hintRect(x, y, m_rcSidePanel.right - 20, y + 70);
-    pDC->DrawText(_T("点击棋盘交叉点落子\n红点标记最近一步"), hintRect,
+    CRect hintRect(x, y, m_rcSidePanel.right - 20, y + 96);
+    pDC->DrawText(
+        _T("悬停可预览落子位置\n红点标记最近一步\nCtrl+Z 悔棋 · F2 新对局"),
+        hintRect,
         DT_LEFT | DT_TOP | DT_WORDBREAK);
 
     pDC->SelectObject(oldFont);
     pDC->SelectObject(oldBrush);
     pDC->SelectObject(oldPen);
+}
+
+void CGobang_FiveChessDlg::UpdateActionState()
+{
+    CWnd* pUndo = GetDlgItem(IDC_BUTTON_REGRET);
+    if (pUndo && pUndo->GetSafeHwnd())
+    {
+        pUndo->EnableWindow(m_chess.CanRegret());
+    }
 }
 
 CString CGobang_FiveChessDlg::GetModeText() const
@@ -291,9 +333,8 @@ CString CGobang_FiveChessDlg::GetModeText() const
     case PERSON_VS_PERSON:
         return _T("双人对战");
     case PERSON_VS_MACHINE:
-        return _T("人机对战");
     default:
-        return _T("自定义");
+        return _T("人机对战");
     }
 }
 
@@ -303,7 +344,17 @@ CString CGobang_FiveChessDlg::GetDifficultyText() const
     {
         return _T("—");
     }
-    return m_chess.GetAIDepth() == AI_HIGH ? _T("高级") : _T("初级");
+
+    switch (m_chess.GetAIDepth())
+    {
+    case AI_PRIMARY:
+        return _T("初级");
+    case AI_HIGH:
+        return _T("高级");
+    case AI_MIDDLE:
+    default:
+        return _T("标准");
+    }
 }
 
 CString CGobang_FiveChessDlg::GetStatusText() const
@@ -341,6 +392,7 @@ void CGobang_FiveChessDlg::OnLButtonUp(UINT nFlags, CPoint point)
     const enumWinFlag before = m_chess.GetWinFlag();
     m_chess.SetPiecePos(point);
     const enumWinFlag after = m_chess.GetWinFlag();
+    UpdateActionState();
     Invalidate(FALSE);
 
     if (before == FIGHTING && after != FIGHTING)
@@ -348,10 +400,10 @@ void CGobang_FiveChessDlg::OnLButtonUp(UINT nFlags, CPoint point)
         switch (after)
         {
         case WHITE_WIN:
-            AfxMessageBox(_T("白棋获胜！"), MB_OK | MB_ICONINFORMATION);
+            AfxMessageBox(_T("白棋获胜。可以悔棋继续本局，或开始新对局。"), MB_OK | MB_ICONINFORMATION);
             break;
         case BLACK_WIN:
-            AfxMessageBox(_T("黑棋获胜！"), MB_OK | MB_ICONINFORMATION);
+            AfxMessageBox(_T("黑棋获胜。可以悔棋继续本局，或开始新对局。"), MB_OK | MB_ICONINFORMATION);
             break;
         case PEACE:
             AfxMessageBox(_T("本局平局。"), MB_OK | MB_ICONINFORMATION);
@@ -372,6 +424,7 @@ BOOL CGobang_FiveChessDlg::OnEraseBkgnd(CDC* pDC)
 void CGobang_FiveChessDlg::OnBnClickedButtonGameStart()
 {
     m_chess.NewGame();
+    UpdateActionState();
     Invalidate(FALSE);
 }
 
@@ -379,8 +432,10 @@ void CGobang_FiveChessDlg::OnBnClickedButtonRegret()
 {
     if (!m_chess.Regret())
     {
-        AfxMessageBox(_T("当前没有可以悔棋的落子。"), MB_OK | MB_ICONINFORMATION);
+        return;
     }
+
+    UpdateActionState();
     Invalidate(FALSE);
 }
 
@@ -391,6 +446,7 @@ void CGobang_FiveChessDlg::OnBnClickedButtonMore()
     if (dlgMore.DoModal() == IDOK)
     {
         m_chess.NewGame();
+        UpdateActionState();
         Invalidate(FALSE);
     }
 }
@@ -407,13 +463,21 @@ void CGobang_FiveChessDlg::OnSize(UINT nType, int cx, int cy)
 
 void CGobang_FiveChessDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
+    BOOL changed = FALSE;
     if (m_chess.GetRectBoard().PtInRect(point))
     {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_CROSS));
+        changed = m_chess.SetHoverPoint(point);
     }
     else
     {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
+        changed = m_chess.ClearHoverPoint();
+    }
+
+    if (changed)
+    {
+        Invalidate(FALSE);
     }
 
     CDialogEx::OnMouseMove(nFlags, point);
@@ -421,7 +485,9 @@ void CGobang_FiveChessDlg::OnMouseMove(UINT nFlags, CPoint point)
 
 void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-    if (nIDCtl != IDC_BUTTON_GAME_START && nIDCtl != IDC_BUTTON_REGRET && nIDCtl != IDC_BUTTON_MORE)
+    if (nIDCtl != IDC_BUTTON_GAME_START
+        && nIDCtl != IDC_BUTTON_REGRET
+        && nIDCtl != IDC_BUTTON_MORE)
     {
         CDialogEx::OnDrawItem(nIDCtl, lpDrawItemStruct);
         return;

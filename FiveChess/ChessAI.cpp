@@ -1,156 +1,407 @@
 #include "StdAfx.h"
 #include "ChessAI.h"
 
+#include <algorithm>
+#include <vector>
 
-const   double SCORE_WHITE[][5]   =   {   {0,  0, 0,	0,	10000000},   {1,     25,	 500,	 2500,   10000000},  {5,    100,	 2500,   50000,   	10000000} };
-const   double SCORE_BLACK[][5]   =   {   {0,  0, 0,	0,	-1000000},   {-5,   -100,	-500,   -10000,	-1000000 },  {-25,  -500,	-10000,	-250000,	-1000000} };
-
-long double    GetScore(UINT uiCol,    UINT  uiRow,  const  enumChessColor emChess[][ROWS],  BOOL   bIgnoreBlank   = FALSE)   
-{    
-    int iSameColor[MAXCREASE];
-    int iBlankFlag[MAXCREASE]   = {0};                         
-
-    GetSameColor(uiCol, uiRow,  emChess[uiCol][uiRow],   iSameColor,    emChess, NULL,    bIgnoreBlank,   iBlankFlag);
-     
-    long double dbScore    = 0;
-    for(int m = 0;  m < MAXCREASE;	m++)
-    {
-        int i   = iBlankFlag[m];
-        int j   = iSameColor[m] - 1;
-        
-        if(WHITE  == emChess[uiCol][uiRow])
-        {
-            dbScore  += SCORE_WHITE[i][j];     
-        }
-        else
-        {
-            dbScore  += SCORE_BLACK[i][j];     
-        }
-    }
-    
-    return  dbScore;
-}
-
-long double ScoreEvaluate(const  enumChessColor emChess[][ROWS],  BOOL   bIgnoreBlank   = FALSE)
+namespace
 {
-    long double dbScoreSum   = 0;
-    for(int i=0;  i<ROWS;  i++)
+    const long double WIN_SCORE = 1000000000000.0L;
+    const long double INF_SCORE = 1000000000000000.0L;
+
+    struct Candidate
     {
-        for(int j=0;  j<ROWS;  j++)
-        {
-            if(NONE !=  emChess[i][j])   
-            {                   
-                dbScoreSum   += GetScore(i,j, emChess,    bIgnoreBlank);
-            }
-        }
+        int x;
+        int y;
+        long double priority;
+    };
+
+    bool CandidateGreater(const Candidate& lhs, const Candidate& rhs)
+    {
+        return lhs.priority > rhs.priority;
     }
 
-    return  dbScoreSum;
-}
-
-
-long double AlphaBetaMin( long double dbAlphaMin, long double dbBetaMax, int iDepthleft ,  enumChessColor emChess[][ROWS],   POINT& ptBest) ;
-long double AlphaBetaMax( long double dbAlphaMin, long double dbBetaMax, int iDepthleft ,  enumChessColor emChess[][ROWS],   POINT& ptBest) 
-{
-    ptBest  = CPoint(-1, -1);    
-    if ( iDepthleft == 0 ) 
+    bool IsInside(int x, int y)
     {
-        return ScoreEvaluate(emChess); 
+        return x >= 0 && x < (int)COLUMNS && y >= 0 && y < (int)ROWS;
     }
-    CPoint  ptTmp;  
 
-    for(int i=0;  i<ROWS;  i++)
+    bool IsBoardEmpty(const enumChessColor board[][ROWS])
     {
-        for(int j=0;  j<ROWS;  j++)
+        for (int x = 0; x < (int)COLUMNS; ++x)
         {
-            if(NONE ==  emChess[i][j])
+            for (int y = 0; y < (int)ROWS; ++y)
             {
-                if(ptBest.x  == -1)   
+                if (board[x][y] != NONE)
                 {
-                    ptBest  = CPoint(i, j);
-                }
-
-                emChess[i][j] = WHITE ;   
-
-                long double   dbScore = AlphaBetaMin( dbAlphaMin, dbBetaMax, iDepthleft - 1,   emChess,   ptTmp); 
-                             
-                emChess[i][j] = NONE;      
-
-                if( dbScore >= dbBetaMax )      
-                {
-                    ptBest  = CPoint(i, j);
-                    return dbBetaMax;    
-                }
-                if( dbScore > dbAlphaMin )
-                {
-                    ptBest  = CPoint(i, j);
-                    dbAlphaMin = dbScore;  
+                    return false;
                 }
             }
         }
-    }
-    return dbAlphaMin;    //Max
-}
-
-long double AlphaBetaMin( long double dbAlphaMin, long double dbBetaMax, int iDepthleft ,  enumChessColor emChess[][ROWS],   POINT& ptBest) 
-{
-    ptBest  = CPoint(-1, -1);
-    if ( iDepthleft == 0 ) 
-    {     
-        return ScoreEvaluate(emChess);         
+        return true;
     }
 
-    for(int i=0;  i<ROWS;  i++)
+    bool HasNeighbor(const enumChessColor board[][ROWS], int x, int y, int radius)
     {
-        for(int j=0;  j<ROWS;  j++)
+        for (int dx = -radius; dx <= radius; ++dx)
         {
-            if(NONE ==  emChess[i][j])
+            for (int dy = -radius; dy <= radius; ++dy)
             {
-                emChess[i][j] = BLACK ;  
-
-                long double   dbScore = AlphaBetaMax( dbAlphaMin, dbBetaMax, iDepthleft - 1,   emChess,   ptBest);
-
-                emChess[i][j] = NONE;   
-               
-                if( dbScore <= dbAlphaMin )  
-                {   
-                    ptBest  = CPoint(i, j);
-                    return dbAlphaMin;         
-                }
-                if( dbScore < dbBetaMax )
+                if (dx == 0 && dy == 0)
                 {
-                    ptBest  = CPoint(i, j);
-                    dbBetaMax = dbScore; 
+                    continue;
+                }
+
+                const int nx = x + dx;
+                const int ny = y + dy;
+                if (IsInside(nx, ny) && board[nx][ny] != NONE)
+                {
+                    return true;
                 }
             }
         }
+        return false;
     }
-    return dbBetaMax; // Min
+
+    int CountOneSide(const enumChessColor board[][ROWS], int x, int y,
+        enumChessColor color, int dx, int dy)
+    {
+        int count = 0;
+        x += dx;
+        y += dy;
+        while (IsInside(x, y) && board[x][y] == color)
+        {
+            ++count;
+            x += dx;
+            y += dy;
+        }
+        return count;
+    }
+
+    int CountOpenEnd(const enumChessColor board[][ROWS], int x, int y,
+        enumChessColor color, int dx, int dy)
+    {
+        x += dx;
+        y += dy;
+        while (IsInside(x, y) && board[x][y] == color)
+        {
+            x += dx;
+            y += dy;
+        }
+        return IsInside(x, y) && board[x][y] == NONE ? 1 : 0;
+    }
+
+    long double LineScore(int count, int openEnds)
+    {
+        if (count >= 5)
+        {
+            return WIN_SCORE;
+        }
+        if (count == 4)
+        {
+            return openEnds == 2 ? 50000000.0L : (openEnds == 1 ? 8000000.0L : 250000.0L);
+        }
+        if (count == 3)
+        {
+            return openEnds == 2 ? 900000.0L : (openEnds == 1 ? 150000.0L : 8000.0L);
+        }
+        if (count == 2)
+        {
+            return openEnds == 2 ? 35000.0L : (openEnds == 1 ? 7000.0L : 500.0L);
+        }
+        if (count == 1)
+        {
+            return openEnds == 2 ? 1200.0L : 150.0L;
+        }
+        return 0.0L;
+    }
+
+    long double MovePatternScore(const enumChessColor board[][ROWS], int x, int y,
+        enumChessColor color)
+    {
+        if (!IsInside(x, y) || board[x][y] != NONE)
+        {
+            return -INF_SCORE;
+        }
+
+        static const int dirs[4][2] = {
+            { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 }
+        };
+
+        long double score = 0.0L;
+        for (int i = 0; i < 4; ++i)
+        {
+            const int dx = dirs[i][0];
+            const int dy = dirs[i][1];
+            const int count = 1
+                + CountOneSide(board, x, y, color, dx, dy)
+                + CountOneSide(board, x, y, color, -dx, -dy);
+            const int openEnds =
+                CountOpenEnd(board, x, y, color, dx, dy)
+                + CountOpenEnd(board, x, y, color, -dx, -dy);
+            score += LineScore(count, openEnds);
+        }
+
+        const int center = 7;
+        const int distance = abs(x - center) + abs(y - center);
+        score += (14 - distance) * 12.0L;
+        return score;
+    }
+
+    bool IsFiveAfterPlaced(const enumChessColor board[][ROWS], int x, int y,
+        enumChessColor color)
+    {
+        static const int dirs[4][2] = {
+            { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 }
+        };
+
+        for (int i = 0; i < 4; ++i)
+        {
+            const int count = 1
+                + CountOneSide(board, x, y, color, dirs[i][0], dirs[i][1])
+                + CountOneSide(board, x, y, color, -dirs[i][0], -dirs[i][1]);
+            if (count >= 5)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void BuildCandidates(const enumChessColor board[][ROWS], enumChessColor color,
+        int limit, std::vector<Candidate>& out)
+    {
+        out.clear();
+
+        if (IsBoardEmpty(board))
+        {
+            Candidate center = { 7, 7, WIN_SCORE / 1000000.0L };
+            out.push_back(center);
+            return;
+        }
+
+        const enumChessColor opponent = (color == WHITE) ? BLACK : WHITE;
+        for (int x = 0; x < (int)COLUMNS; ++x)
+        {
+            for (int y = 0; y < (int)ROWS; ++y)
+            {
+                if (board[x][y] != NONE || !HasNeighbor(board, x, y, 2))
+                {
+                    continue;
+                }
+
+                const long double attack = MovePatternScore(board, x, y, color);
+                const long double defend = MovePatternScore(board, x, y, opponent);
+
+                Candidate candidate;
+                candidate.x = x;
+                candidate.y = y;
+                candidate.priority = attack + defend * 0.96L;
+                out.push_back(candidate);
+            }
+        }
+
+        std::sort(out.begin(), out.end(), CandidateGreater);
+        if (limit > 0 && (int)out.size() > limit)
+        {
+            out.resize(limit);
+        }
+    }
+
+    long double EvaluateBoard(const enumChessColor board[][ROWS])
+    {
+        if (IsBoardEmpty(board))
+        {
+            return 0.0L;
+        }
+
+        long double whiteBest = 0.0L;
+        long double whiteSecond = 0.0L;
+        long double blackBest = 0.0L;
+        long double blackSecond = 0.0L;
+
+        for (int x = 0; x < (int)COLUMNS; ++x)
+        {
+            for (int y = 0; y < (int)ROWS; ++y)
+            {
+                if (board[x][y] != NONE || !HasNeighbor(board, x, y, 2))
+                {
+                    continue;
+                }
+
+                const long double white = MovePatternScore(board, x, y, WHITE);
+                const long double black = MovePatternScore(board, x, y, BLACK);
+
+                if (white > whiteBest)
+                {
+                    whiteSecond = whiteBest;
+                    whiteBest = white;
+                }
+                else if (white > whiteSecond)
+                {
+                    whiteSecond = white;
+                }
+
+                if (black > blackBest)
+                {
+                    blackSecond = blackBest;
+                    blackBest = black;
+                }
+                else if (black > blackSecond)
+                {
+                    blackSecond = black;
+                }
+            }
+        }
+
+        return (whiteBest + whiteSecond * 0.30L)
+            - (blackBest + blackSecond * 0.30L) * 1.04L;
+    }
+
+    long double Search(enumChessColor board[][ROWS], int depth,
+        long double alpha, long double beta, bool whiteTurn, int candidateLimit)
+    {
+        if (depth <= 0)
+        {
+            return EvaluateBoard(board);
+        }
+
+        const enumChessColor color = whiteTurn ? WHITE : BLACK;
+        std::vector<Candidate> candidates;
+        BuildCandidates(board, color, candidateLimit, candidates);
+        if (candidates.empty())
+        {
+            return EvaluateBoard(board);
+        }
+
+        if (whiteTurn)
+        {
+            long double best = -INF_SCORE;
+            for (size_t i = 0; i < candidates.size(); ++i)
+            {
+                const Candidate& c = candidates[i];
+                board[c.x][c.y] = WHITE;
+
+                long double score;
+                if (IsFiveAfterPlaced(board, c.x, c.y, WHITE))
+                {
+                    score = WIN_SCORE + depth * 1000.0L;
+                }
+                else
+                {
+                    score = Search(board, depth - 1, alpha, beta, false, candidateLimit);
+                }
+
+                board[c.x][c.y] = NONE;
+                if (score > best)
+                {
+                    best = score;
+                }
+                if (best > alpha)
+                {
+                    alpha = best;
+                }
+                if (alpha >= beta)
+                {
+                    break;
+                }
+            }
+            return best;
+        }
+
+        long double best = INF_SCORE;
+        for (size_t i = 0; i < candidates.size(); ++i)
+        {
+            const Candidate& c = candidates[i];
+            board[c.x][c.y] = BLACK;
+
+            long double score;
+            if (IsFiveAfterPlaced(board, c.x, c.y, BLACK))
+            {
+                score = -WIN_SCORE - depth * 1000.0L;
+            }
+            else
+            {
+                score = Search(board, depth - 1, alpha, beta, true, candidateLimit);
+            }
+
+            board[c.x][c.y] = NONE;
+            if (score < best)
+            {
+                best = score;
+            }
+            if (best < beta)
+            {
+                beta = best;
+            }
+            if (alpha >= beta)
+            {
+                break;
+            }
+        }
+        return best;
+    }
+
+    BOOL ChooseBySearch(POINT& pt, enumChessColor board[][ROWS], int depth, int candidateLimit)
+    {
+        std::vector<Candidate> candidates;
+        BuildCandidates(board, WHITE, candidateLimit, candidates);
+        if (candidates.empty())
+        {
+            pt = CPoint(-1, -1);
+            return FALSE;
+        }
+
+        long double bestScore = -INF_SCORE;
+        pt = CPoint(candidates[0].x, candidates[0].y);
+
+        for (size_t i = 0; i < candidates.size(); ++i)
+        {
+            const Candidate& c = candidates[i];
+            board[c.x][c.y] = WHITE;
+
+            long double score;
+            if (IsFiveAfterPlaced(board, c.x, c.y, WHITE))
+            {
+                score = WIN_SCORE;
+            }
+            else
+            {
+                score = Search(board, depth - 1, -INF_SCORE, INF_SCORE, false, candidateLimit);
+            }
+
+            board[c.x][c.y] = NONE;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                pt = CPoint(c.x, c.y);
+            }
+        }
+
+        return TRUE;
+    }
 }
 
-
-
-
-// ------------------ AI  Function ---------------------------------
- 
-BOOL    AIPrimary (POINT &pt ,  enumChessColor emChess[][ROWS])
+BOOL AIPrimary(POINT& pt, enumChessColor emChess[][ROWS])
 {
-    AlphaBetaMax(-1e10, 1e11, 1, emChess, pt);
-
-    if(pt.x  == -1)   
+    std::vector<Candidate> candidates;
+    BuildCandidates(emChess, WHITE, 14, candidates);
+    if (candidates.empty())
     {
-        return  FALSE; 
+        pt = CPoint(-1, -1);
+        return FALSE;
     }
-    return  TRUE;
+
+    pt = CPoint(candidates[0].x, candidates[0].y);
+    return TRUE;
 }
 
-BOOL    AIHigh    (POINT &pt ,  enumChessColor emChess[][ROWS])
+BOOL AIMiddle(POINT& pt, enumChessColor emChess[][ROWS])
 {
-    AlphaBetaMax(-1e7, 1e8, 2, emChess, pt);
-    
-    if(pt.x  == -1)   
-    {
-        return  FALSE; 
-    }
-    return  TRUE;
+    return ChooseBySearch(pt, emChess, 2, 10);
+}
+
+BOOL AIHigh(POINT& pt, enumChessColor emChess[][ROWS])
+{
+    return ChooseBySearch(pt, emChess, 3, 8);
 }

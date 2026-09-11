@@ -61,11 +61,11 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "关于 FiveChess"
 FONT 10, "Microsoft YaHei UI", 0, 0, 0x1
 BEGIN
-    LTEXT           "FiveChess 2.0",IDC_STATIC,18,14,130,12,SS_NOPREFIX
+    LTEXT           "FiveChess 2.1",IDC_STATIC,18,14,130,12,SS_NOPREFIX
     LTEXT           "C++ / MFC 五子棋桌面应用",IDC_STATIC,18,34,180,10,SS_NOPREFIX
-    LTEXT           "原课程项目：东南大学 2024 暑期学校",IDC_STATIC,18,53,190,10,SS_NOPREFIX
-    LTEXT           "原始成员：赵紫涵 · 李源晟 · 高艺萌",IDC_STATIC,18,69,190,10,SS_NOPREFIX
-    LTEXT           "2026 · UI 与工程结构整理",IDC_STATIC,18,85,160,10,SS_NOPREFIX
+    LTEXT           "东南大学 2024 暑期学校课程实践",IDC_STATIC,18,53,190,10,SS_NOPREFIX
+    LTEXT           "作者：李源晟",IDC_STATIC,18,69,190,10,SS_NOPREFIX
+    LTEXT           "Alpha-Beta AI · GDI 双缓冲界面",IDC_STATIC,18,85,190,10,SS_NOPREFIX
     DEFPUSHBUTTON   "确定",IDOK,165,94,48,16,WS_GROUP
 END
 
@@ -86,9 +86,9 @@ CAPTION "对局设置"
 FONT 10, "Microsoft YaHei UI", 400, 0, 0x1
 BEGIN
     LTEXT           "对战模式",IDC_STATIC,22,24,48,10
-    COMBOBOX        IDC_COMBO_VS_MODE,88,20,136,70,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO_VS_MODE,88,20,136,78,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "AI 难度",IDC_STATIC,22,53,48,10
-    COMBOBOX        IDC_COMBO_AI,88,49,136,70,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO_AI,88,49,136,88,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     DEFPUSHBUTTON   "应用并开始新对局",IDOK,72,86,100,18
     PUSHBUTTON      "取消",IDCANCEL,180,86,44,18
 END
@@ -96,8 +96,8 @@ END
 /////////////////////////////////////////////////////////////////////////////
 // Version
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,0
- PRODUCTVERSION 2,0,0,0
+ FILEVERSION 2,1,0,0
+ PRODUCTVERSION 2,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -112,14 +112,14 @@ BEGIN
     BEGIN
         BLOCK "080404b0"
         BEGIN
-            VALUE "CompanyName", "FiveChess Project Team"
+            VALUE "CompanyName", "Yuansheng Li"
             VALUE "FileDescription", "FiveChess - C++/MFC Gomoku"
-            VALUE "FileVersion", "2.0.0"
+            VALUE "FileVersion", "2.1.0"
             VALUE "InternalName", "Gobang_FiveChess.exe"
-            VALUE "LegalCopyright", "(C) 2024-2026 FiveChess Project Team"
+            VALUE "LegalCopyright", "Copyright (C) 2024-2026 Yuansheng Li"
             VALUE "OriginalFilename", "Gobang_FiveChess.exe"
             VALUE "ProductName", "FiveChess"
-            VALUE "ProductVersion", "2.0.0"
+            VALUE "ProductVersion", "2.1.0"
         END
     END
     BLOCK "VarFileInfo"

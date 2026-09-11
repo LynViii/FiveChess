@@ -2,31 +2,32 @@
 #include "afxwin.h"
 #include "Chess.h"
 
-
-// CDialogMore 对话框
-
 class CDialogMore : public CDialogEx
 {
-	DECLARE_DYNAMIC(CDialogMore)
+    DECLARE_DYNAMIC(CDialogMore)
 
 public:
-	CDialogMore(CWnd* pParent = NULL);
-	virtual ~CDialogMore();
+    CDialogMore(CWnd* pParent = NULL);
+    virtual ~CDialogMore();
 
-// 对话框数据
-	enum { IDD = IDD_DIALOG_MORE };
+    enum { IDD = IDD_DIALOG_MORE };
 
-private:
-    CChess*  m_pChess;
+    void SetChess(CChess* pChess);
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);
+    virtual void DoDataExchange(CDataExchange* pDX);
+    virtual BOOL OnInitDialog();
 
-	DECLARE_MESSAGE_MAP()
-public:
-    afx_msg void OnBnClickedOk();
+    DECLARE_MESSAGE_MAP()
+
+private:
+    CChess* m_pChess;
     CComboBox m_comboxAI;
     CComboBox m_comboxVSMode;
-    virtual BOOL OnInitDialog();
-    void    SetChess(CChess  *pChess);
+
+    void UpdateControlState();
+
+public:
+    afx_msg void OnBnClickedOk();
+    afx_msg void OnCbnSelchangeVsMode();
 };

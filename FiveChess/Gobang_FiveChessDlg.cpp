@@ -2,30 +2,21 @@
 #include "Gobang_FiveChess.h"
 #include "Gobang_FiveChessDlg.h"
 #include "afxdialogex.h"
-
 #include "DialogMore.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-
-// ”√”⁄”¶”√≥Ã–Ú°∞πÿ”⁄°±≤Àµ•œÓµƒ CAboutDlg ∂‘ª∞øÚ
-
 class CAboutDlg : public CDialogEx
 {
 public:
-	CAboutDlg();
+    CAboutDlg();
+    enum { IDD = IDD_ABOUTBOX };
 
-// ∂‘ª∞øÚ ˝æ›
-	enum { IDD = IDD_ABOUTBOX };
-
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV ÷ß≥÷
-
-//  µœ÷
 protected:
-	DECLARE_MESSAGE_MAP()
+    virtual void DoDataExchange(CDataExchange* pDX);
+    DECLARE_MESSAGE_MAP()
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(CAboutDlg::IDD)
@@ -34,241 +25,460 @@ CAboutDlg::CAboutDlg() : CDialogEx(CAboutDlg::IDD)
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
+    CDialogEx::DoDataExchange(pDX);
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
-
-BEGIN_EASYSIZE_MAP(CGobang_FiveChessDlg)
-	EASYSIZE(IDC_BUTTON_GAME_START,	ES_KEEPSIZE,	ES_BORDER,
-        ES_BORDER,ES_KEEPSIZE,0)
-	EASYSIZE(IDC_BUTTON_REGRET,	ES_KEEPSIZE,	ES_BORDER,
-        ES_BORDER,ES_KEEPSIZE,0)
-	EASYSIZE(IDC_BUTTON_MORE,	ES_KEEPSIZE,	ES_BORDER,
-        ES_BORDER,ES_KEEPSIZE,0)
-
-END_EASYSIZE_MAP
-
-
-
-CGobang_FiveChessDlg::CGobang_FiveChessDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CGobang_FiveChessDlg::IDD, pParent)
+CGobang_FiveChessDlg::CGobang_FiveChessDlg(CWnd* pParent)
+    : CDialogEx(CGobang_FiveChessDlg::IDD, pParent)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
+    m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
-   
+
 CGobang_FiveChessDlg::~CGobang_FiveChessDlg()
-{   
+{
 }
 
 void CGobang_FiveChessDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
+    CDialogEx::DoDataExchange(pDX);
 }
 
 BEGIN_MESSAGE_MAP(CGobang_FiveChessDlg, CDialogEx)
-	ON_WM_SYSCOMMAND()
-	ON_WM_PAINT()
-	ON_WM_QUERYDRAGICON()
-	ON_WM_LBUTTONUP()
-	ON_WM_ERASEBKGND()
-	ON_BN_CLICKED(IDC_BUTTON_GAME_START, &CGobang_FiveChessDlg::OnBnClickedButtonGameStart)
-	ON_BN_CLICKED(IDC_BUTTON_REGRET, &CGobang_FiveChessDlg::OnBnClickedButtonRegret)
-	ON_BN_CLICKED(IDC_BUTTON_MORE, &CGobang_FiveChessDlg::OnBnClickedButtonMore)
+    ON_WM_SYSCOMMAND()
+    ON_WM_PAINT()
+    ON_WM_QUERYDRAGICON()
+    ON_WM_LBUTTONUP()
+    ON_WM_ERASEBKGND()
+    ON_BN_CLICKED(IDC_BUTTON_GAME_START, &CGobang_FiveChessDlg::OnBnClickedButtonGameStart)
+    ON_BN_CLICKED(IDC_BUTTON_REGRET, &CGobang_FiveChessDlg::OnBnClickedButtonRegret)
+    ON_BN_CLICKED(IDC_BUTTON_MORE, &CGobang_FiveChessDlg::OnBnClickedButtonMore)
     ON_WM_SIZE()
     ON_WM_MOUSEMOVE()
+    ON_WM_DRAWITEM()
+    ON_WM_GETMINMAXINFO()
 END_MESSAGE_MAP()
-
-
 
 BOOL CGobang_FiveChessDlg::OnInitDialog()
 {
-	CDialogEx::OnInitDialog();
+    CDialogEx::OnInitDialog();
 
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
+    ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
+    ASSERT(IDM_ABOUTBOX < 0xF000);
 
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != NULL)
-	{
-		BOOL bNameValid;
-		CString strAboutMenu;
-		bNameValid = strAboutMenu.LoadString(IDS_ABOUTBOX);
-		ASSERT(bNameValid);
-		if (!strAboutMenu.IsEmpty())
-		{
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
-		}
-	}
+    CMenu* pSysMenu = GetSystemMenu(FALSE);
+    if (pSysMenu != NULL)
+    {
+        CString strAboutMenu;
+        if (strAboutMenu.LoadString(IDS_ABOUTBOX) && !strAboutMenu.IsEmpty())
+        {
+            pSysMenu->AppendMenu(MF_SEPARATOR);
+            pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
+        }
+    }
 
+    SetIcon(m_hIcon, TRUE);
+    SetIcon(m_hIcon, FALSE);
+    SetWindowText(_T("FiveChess ¬∑ ‰∫îÂ≠êÊ£ã"));
 
-	SetIcon(m_hIcon, TRUE);		
-	SetIcon(m_hIcon, FALSE);		
+    m_fontTitle.CreatePointFont(190, _T("Microsoft YaHei UI"));
+    m_fontSubtitle.CreatePointFont(95, _T("Microsoft YaHei UI"));
+    m_fontBody.CreatePointFont(95, _T("Microsoft YaHei UI"));
+    m_fontButton.CreatePointFont(100, _T("Microsoft YaHei UI"));
 
-	// TODO: ‘⁄¥ÀÃÌº”∂ÓÕ‚µƒ≥ı ºªØ¥˙¬Î
-	CRect   rcClient;
+    const int buttonIds[] = { IDC_BUTTON_GAME_START, IDC_BUTTON_REGRET, IDC_BUTTON_MORE };
+    for (int i = 0; i < 3; ++i)
+    {
+        CWnd* pButton = GetDlgItem(buttonIds[i]);
+        if (pButton)
+        {
+            pButton->ModifyStyle(BS_TYPEMASK, BS_OWNERDRAW);
+            pButton->SetFont(&m_fontButton);
+        }
+    }
 
-	GetClientRect(&rcClient);
-	m_chess.Init(rcClient);
+    CRect windowRect;
+    GetWindowRect(&windowRect);
+    const int targetWidth = max(820, windowRect.Width());
+    const int targetHeight = max(590, windowRect.Height());
+    SetWindowPos(NULL, 0, 0, targetWidth, targetHeight, SWP_NOMOVE | SWP_NOZORDER);
+    CenterWindow();
 
-    INIT_EASYSIZE;
-	return TRUE; 
+    CRect client;
+    GetClientRect(&client);
+    LayoutScene(client.Width(), client.Height());
+    return TRUE;
 }
 
 void CGobang_FiveChessDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-	{
-		CAboutDlg dlgAbout;
-		dlgAbout.DoModal();
-	}
-	else
-	{
-		CDialogEx::OnSysCommand(nID, lParam);
-	}
+    if ((nID & 0xFFF0) == IDM_ABOUTBOX)
+    {
+        CAboutDlg dlgAbout;
+        dlgAbout.DoModal();
+    }
+    else
+    {
+        CDialogEx::OnSysCommand(nID, lParam);
+    }
+}
+
+void CGobang_FiveChessDlg::LayoutScene(int cx, int cy)
+{
+    if (cx <= 0 || cy <= 0)
+    {
+        return;
+    }
+
+    const int margin = 24;
+    const int headerHeight = 76;
+    const int gap = 18;
+    int panelWidth = min(220, max(190, cx / 4));
+
+    m_rcSidePanel.SetRect(cx - margin - panelWidth, headerHeight, cx - margin, cy - margin);
+    m_rcBoardArea.SetRect(margin, headerHeight, m_rcSidePanel.left - gap, cy - margin);
+
+    if (m_rcBoardArea.Width() > 120 && m_rcBoardArea.Height() > 120)
+    {
+        m_chess.Init(m_rcBoardArea);
+    }
+
+    const int buttonLeft = m_rcSidePanel.left + 20;
+    const int buttonWidth = m_rcSidePanel.Width() - 40;
+    const int buttonHeight = 40;
+
+    struct ButtonLayout
+    {
+        int id;
+        int offsetFromBottom;
+    };
+
+    const ButtonLayout layouts[] = {
+        { IDC_BUTTON_GAME_START, 166 },
+        { IDC_BUTTON_REGRET, 114 },
+        { IDC_BUTTON_MORE, 62 }
+    };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        CWnd* pButton = GetDlgItem(layouts[i].id);
+        if (pButton && pButton->GetSafeHwnd())
+        {
+            pButton->MoveWindow(buttonLeft, m_rcSidePanel.bottom - layouts[i].offsetFromBottom,
+                buttonWidth, buttonHeight, TRUE);
+        }
+    }
 }
 
 void CGobang_FiveChessDlg::OnPaint()
 {
-	if (IsIconic())
-	{
-		CPaintDC dc(this); 
+    if (IsIconic())
+    {
+        CPaintDC dc(this);
+        SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+        int cxIcon = GetSystemMetrics(SM_CXICON);
+        int cyIcon = GetSystemMetrics(SM_CYICON);
+        CRect rect;
+        GetClientRect(&rect);
+        int x = (rect.Width() - cxIcon + 1) / 2;
+        int y = (rect.Height() - cyIcon + 1) / 2;
+        dc.DrawIcon(x, y, m_hIcon);
+        return;
+    }
 
-		int cxIcon = GetSystemMetrics(SM_CXICON);
-		int cyIcon = GetSystemMetrics(SM_CYICON);
-		CRect rect;
-		GetClientRect(&rect);
-		int x = (rect.Width() - cxIcon + 1) / 2;
-		int y = (rect.Height() - cyIcon + 1) / 2;
+    CPaintDC dc(this);
+    CRect client;
+    GetClientRect(&client);
+    dc.FillSolidRect(client, RGB(246, 247, 245));
+    dc.SetBkMode(TRANSPARENT);
 
-		dc.DrawIcon(x, y, m_hIcon);
-	}
-	else
-	{
-		CDialogEx::OnPaint();
+    CFont* oldFont = dc.SelectObject(&m_fontTitle);
+    dc.SetTextColor(RGB(31, 43, 38));
+    dc.TextOut(24, 18, _T("FiveChess"));
 
-        CRect   rcBtnStart, rcBtnRegret, rcBtnMore;
-        CRgn    rgnChildWnd,    rgnBtnStart,    rgnBtnRegret,    rgnBtnMore;			
-		CDC*	pDC	= GetDC();	
+    dc.SelectObject(&m_fontSubtitle);
+    dc.SetTextColor(RGB(115, 124, 119));
+    dc.TextOut(25, 49, _T("ÁÆÄÊ¥Å„ÄÅ‰∏ìÊ≥®ÁöÑ‰∫îÂ≠êÊ£ãÂØπÂ±Ä"));
 
-        GetDlgItem(IDC_BUTTON_GAME_START)->GetWindowRect(rcBtnStart);
-        GetDlgItem(IDC_BUTTON_REGRET)->GetWindowRect(rcBtnRegret);
-        GetDlgItem(IDC_BUTTON_MORE)->GetWindowRect(rcBtnMore);
-        ScreenToClient(rcBtnStart);
-        ScreenToClient(rcBtnRegret);
-        ScreenToClient(rcBtnMore);
+    CPen headerLine(PS_SOLID, 1, RGB(226, 230, 227));
+    CPen* oldPen = dc.SelectObject(&headerLine);
+    dc.MoveTo(24, 70);
+    dc.LineTo(client.right - 24, 70);
+    dc.SelectObject(oldPen);
 
-        rgnBtnStart.CreateRectRgnIndirect(rcBtnStart);
-        rgnBtnRegret.CreateRectRgnIndirect(rcBtnRegret);   
-        rgnBtnMore.CreateRectRgnIndirect(rcBtnMore);   
-        rgnChildWnd.CreateRectRgn(0, 0, 0, 0);
-        rgnChildWnd.CombineRgn(&rgnBtnStart, &rgnBtnRegret, RGN_OR);
-        rgnChildWnd.CombineRgn(&rgnChildWnd, &rgnBtnMore, RGN_OR);
-        pDC->SelectClipRgn(&rgnChildWnd, RGN_DIFF);
+    m_chess.Draw(&dc);
+    DrawSidebar(&dc);
 
-		m_chess.Draw(pDC);
+    dc.SelectObject(oldFont);
+}
 
-        pDC->SelectClipRgn(NULL);
-        rgnBtnStart.DeleteObject();
-        rgnBtnRegret.DeleteObject();
-        rgnBtnMore.DeleteObject();
-        rgnChildWnd.DeleteObject();
-		ReleaseDC(pDC);
-	}
+void CGobang_FiveChessDlg::DrawSidebar(CDC* pDC)
+{
+    if (!pDC || m_rcSidePanel.IsRectEmpty())
+    {
+        return;
+    }
+
+    CPen borderPen(PS_SOLID, 1, RGB(222, 227, 223));
+    CBrush panelBrush(RGB(255, 255, 255));
+    CPen* oldPen = pDC->SelectObject(&borderPen);
+    CBrush* oldBrush = pDC->SelectObject(&panelBrush);
+    pDC->RoundRect(m_rcSidePanel, CPoint(18, 18));
+
+    pDC->SetBkMode(TRANSPARENT);
+    CFont* oldFont = pDC->SelectObject(&m_fontBody);
+    pDC->SetTextColor(RGB(42, 52, 47));
+
+    int x = m_rcSidePanel.left + 20;
+    int y = m_rcSidePanel.top + 22;
+
+    pDC->SelectObject(&m_fontButton);
+    pDC->TextOut(x, y, _T("ÂØπÂ±Ä‰ø°ÊÅØ"));
+    y += 36;
+
+    CRect statusRect(x, y, m_rcSidePanel.right - 20, y + 34);
+    CBrush statusBrush(RGB(40, 81, 65));
+    CPen statusPen(PS_SOLID, 1, RGB(40, 81, 65));
+    pDC->SelectObject(&statusPen);
+    pDC->SelectObject(&statusBrush);
+    pDC->RoundRect(statusRect, CPoint(12, 12));
+    pDC->SetTextColor(RGB(255, 255, 255));
+    pDC->SelectObject(&m_fontBody);
+    CString status = GetStatusText();
+    pDC->DrawText(status, statusRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    pDC->SelectObject(&borderPen);
+    pDC->SelectObject(&panelBrush);
+    pDC->SetTextColor(RGB(94, 105, 99));
+    y += 54;
+
+    CString line;
+    line.Format(_T("Ê®°Âºè        %s"), GetModeText().GetString());
+    pDC->TextOut(x, y, line);
+    y += 30;
+
+    line.Format(_T("AI ÈöæÂ∫¶     %s"), GetDifficultyText().GetString());
+    pDC->TextOut(x, y, line);
+    y += 30;
+
+    line.Format(_T("Â∑≤ËêΩÂ≠ê      %d"), m_chess.GetMoveCount());
+    pDC->TextOut(x, y, line);
+    y += 42;
+
+    CPen divider(PS_SOLID, 1, RGB(234, 237, 235));
+    pDC->SelectObject(&divider);
+    pDC->MoveTo(x, y);
+    pDC->LineTo(m_rcSidePanel.right - 20, y);
+    y += 18;
+
+    pDC->SetTextColor(RGB(132, 140, 136));
+    CRect hintRect(x, y, m_rcSidePanel.right - 20, y + 70);
+    pDC->DrawText(_T("ÁÇπÂáªÊ£ãÁõò‰∫§ÂèâÁÇπËêΩÂ≠ê\nÁ∫¢ÁÇπÊ†áËÆ∞ÊúÄËøë‰∏ÄÊ≠•"), hintRect,
+        DT_LEFT | DT_TOP | DT_WORDBREAK);
+
+    pDC->SelectObject(oldFont);
+    pDC->SelectObject(oldBrush);
+    pDC->SelectObject(oldPen);
+}
+
+CString CGobang_FiveChessDlg::GetModeText() const
+{
+    switch (m_chess.GetVSMode())
+    {
+    case PERSON_VS_PERSON:
+        return _T("Âèå‰∫∫ÂØπÊàò");
+    case PERSON_VS_MACHINE:
+        return _T("‰∫∫Êú∫ÂØπÊàò");
+    default:
+        return _T("Ëá™ÂÆö‰πâ");
+    }
+}
+
+CString CGobang_FiveChessDlg::GetDifficultyText() const
+{
+    if (m_chess.GetVSMode() == PERSON_VS_PERSON)
+    {
+        return _T("‚Äî");
+    }
+    return m_chess.GetAIDepth() == AI_HIGH ? _T("È´òÁ∫ß") : _T("ÂàùÁ∫ß");
+}
+
+CString CGobang_FiveChessDlg::GetStatusText() const
+{
+    switch (m_chess.GetWinFlag())
+    {
+    case BLACK_WIN:
+        return _T("ÈªëÊ£ãËé∑ËÉú");
+    case WHITE_WIN:
+        return _T("ÁôΩÊ£ãËé∑ËÉú");
+    case PEACE:
+        return _T("Êú¨Â±ÄÂπ≥Â±Ä");
+    default:
+        if (m_chess.GetVSMode() == PERSON_VS_MACHINE)
+        {
+            return _T("ËΩÆÂà∞‰Ω† ¬∑ ÈªëÊ£ã");
+        }
+        return m_chess.IsBlackTurn() ? _T("ÈªëÊ£ãÂõûÂêà") : _T("ÁôΩÊ£ãÂõûÂêà");
+    }
 }
 
 HCURSOR CGobang_FiveChessDlg::OnQueryDragIcon()
 {
-	return static_cast<HCURSOR>(m_hIcon);
+    return static_cast<HCURSOR>(m_hIcon);
 }
-
 
 void CGobang_FiveChessDlg::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	m_chess.SetPiecePos(point);
-	Invalidate();
-
-    switch(m_chess.GetWinFlag())
+    if (!m_chess.GetRectBoard().PtInRect(point))
     {
-    case    WHITE_WIN:
-        AfxMessageBox(_T("∞◊∆Ï”Æ"));
-        break;
-    case    BLACK_WIN:
-        AfxMessageBox(_T("∫⁄∆Ï”Æ"));
-        break;
-    case    PEACE:
-        AfxMessageBox(_T("∆Ωæ÷"));
-        break;
-    default:
-        break;
+        CDialogEx::OnLButtonUp(nFlags, point);
+        return;
     }
 
-	CDialogEx::OnLButtonUp(nFlags, point);
-}
+    const enumWinFlag before = m_chess.GetWinFlag();
+    m_chess.SetPiecePos(point);
+    const enumWinFlag after = m_chess.GetWinFlag();
+    Invalidate(FALSE);
 
+    if (before == FIGHTING && after != FIGHTING)
+    {
+        switch (after)
+        {
+        case WHITE_WIN:
+            AfxMessageBox(_T("ÁôΩÊ£ãËé∑ËÉúÔºÅ"), MB_OK | MB_ICONINFORMATION);
+            break;
+        case BLACK_WIN:
+            AfxMessageBox(_T("ÈªëÊ£ãËé∑ËÉúÔºÅ"), MB_OK | MB_ICONINFORMATION);
+            break;
+        case PEACE:
+            AfxMessageBox(_T("Êú¨Â±ÄÂπ≥Â±Ä„ÄÇ"), MB_OK | MB_ICONINFORMATION);
+            break;
+        default:
+            break;
+        }
+    }
+
+    CDialogEx::OnLButtonUp(nFlags, point);
+}
 
 BOOL CGobang_FiveChessDlg::OnEraseBkgnd(CDC* pDC)
 {
-	return TRUE;
+    return TRUE;
 }
-
 
 void CGobang_FiveChessDlg::OnBnClickedButtonGameStart()
 {
     m_chess.NewGame();
-    Invalidate();
+    Invalidate(FALSE);
 }
-
 
 void CGobang_FiveChessDlg::OnBnClickedButtonRegret()
 {
-    if(! m_chess.Regret())
+    if (!m_chess.Regret())
     {
-        AfxMessageBox(_T("ƒ„“— π”√ÕÍª⁄∆Â¥Œ ˝"));
+        AfxMessageBox(_T("ÂΩìÂâçÊ≤°ÊúâÂèØ‰ª•ÊÇîÊ£ãÁöÑËêΩÂ≠ê„ÄÇ"), MB_OK | MB_ICONINFORMATION);
     }
-    Invalidate();
+    Invalidate(FALSE);
 }
-
 
 void CGobang_FiveChessDlg::OnBnClickedButtonMore()
 {
-    CDialogMore* dlgMore    = new   CDialogMore;
-
-	dlgMore->Create(IDD_DIALOG_MORE);   	
-    dlgMore->ShowWindow(SW_SHOW);  
-
-    dlgMore->SetChess(&m_chess);
-
+    CDialogMore dlgMore(this);
+    dlgMore.SetChess(&m_chess);
+    if (dlgMore.DoModal() == IDOK)
+    {
+        m_chess.NewGame();
+        Invalidate(FALSE);
+    }
 }
-
 
 void CGobang_FiveChessDlg::OnSize(UINT nType, int cx, int cy)
-{       
-    CDialogEx::OnSize(nType, cx, cy);   
-
-    CRect	rcClient;
-	GetClientRect(&rcClient);
-
-	m_chess.Init(rcClient);
-
-    UPDATE_EASYSIZE;
-    Invalidate();
+{
+    CDialogEx::OnSize(nType, cx, cy);
+    if (GetSafeHwnd() && cx > 0 && cy > 0)
+    {
+        LayoutScene(cx, cy);
+        Invalidate(FALSE);
+    }
 }
-
 
 void CGobang_FiveChessDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
-    CRect   rcBoard = m_chess.GetRectBoard();
-    if(rcBoard.PtInRect(point))
+    if (m_chess.GetRectBoard().PtInRect(point))
     {
-        HCURSOR hCursor = AfxGetApp()->LoadStandardCursor(IDC_CROSS); 
-        SetCursor(hCursor);	
+        SetCursor(AfxGetApp()->LoadStandardCursor(IDC_CROSS));
+    }
+    else
+    {
+        SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
     }
 
     CDialogEx::OnMouseMove(nFlags, point);
+}
+
+void CGobang_FiveChessDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+    if (nIDCtl != IDC_BUTTON_GAME_START && nIDCtl != IDC_BUTTON_REGRET && nIDCtl != IDC_BUTTON_MORE)
+    {
+        CDialogEx::OnDrawItem(nIDCtl, lpDrawItemStruct);
+        return;
+    }
+
+    CDC dc;
+    dc.Attach(lpDrawItemStruct->hDC);
+    CRect rc(lpDrawItemStruct->rcItem);
+
+    const BOOL isPrimary = (nIDCtl == IDC_BUTTON_GAME_START);
+    const BOOL isPressed = (lpDrawItemStruct->itemState & ODS_SELECTED) != 0;
+    const BOOL isDisabled = (lpDrawItemStruct->itemState & ODS_DISABLED) != 0;
+
+    COLORREF fill = isPrimary ? RGB(40, 81, 65) : RGB(248, 249, 248);
+    COLORREF border = isPrimary ? RGB(40, 81, 65) : RGB(217, 223, 219);
+    COLORREF text = isPrimary ? RGB(255, 255, 255) : RGB(55, 67, 61);
+
+    if (isPressed)
+    {
+        fill = isPrimary ? RGB(31, 65, 52) : RGB(235, 238, 236);
+    }
+    if (isDisabled)
+    {
+        fill = RGB(240, 242, 241);
+        border = RGB(226, 229, 227);
+        text = RGB(166, 173, 169);
+    }
+
+    CPen pen(PS_SOLID, 1, border);
+    CBrush brush(fill);
+    CPen* oldPen = dc.SelectObject(&pen);
+    CBrush* oldBrush = dc.SelectObject(&brush);
+    dc.RoundRect(rc, CPoint(12, 12));
+
+    CString label;
+    GetDlgItem(nIDCtl)->GetWindowText(label);
+    CFont* oldFont = dc.SelectObject(&m_fontButton);
+    dc.SetBkMode(TRANSPARENT);
+    dc.SetTextColor(text);
+    dc.DrawText(label, rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    if (lpDrawItemStruct->itemState & ODS_FOCUS)
+    {
+        CRect focus = rc;
+        focus.DeflateRect(4, 4);
+        dc.DrawFocusRect(focus);
+    }
+
+    dc.SelectObject(oldFont);
+    dc.SelectObject(oldBrush);
+    dc.SelectObject(oldPen);
+    dc.Detach();
+}
+
+void CGobang_FiveChessDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
+{
+    CDialogEx::OnGetMinMaxInfo(lpMMI);
+    lpMMI->ptMinTrackSize.x = 760;
+    lpMMI->ptMinTrackSize.y = 540;
 }

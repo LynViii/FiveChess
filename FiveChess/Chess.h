@@ -18,6 +18,8 @@ struct MOVE_RECORD
 class CChess
 {
 public:
+    static const int MAX_REGRET_COUNT = 3;
+
     CChess(void);
     ~CChess(void);
 
@@ -36,7 +38,10 @@ public:
     int GetAIDepth() const;
     BOOL IsBlackTurn() const;
     int GetMoveCount() const;
+    int GetRegretRemaining() const;
+    int GetRegretLimit() const;
     CRect GetRectBoard();
+    CRect GetRectBackground();
 
     BOOL SetHoverPoint(CPoint point);
     BOOL ClearHoverPoint();
@@ -54,6 +59,7 @@ private:
     BOOL m_bTurnBlack;
     int m_emAIDepth;
     BOOL m_bHasWinningLine;
+    int m_regretCount;
     std::vector<MOVE_RECORD> m_moves;
 
     BOOL IsWin(UINT uiCol, UINT uiRow, enumChessColor emChessColor);

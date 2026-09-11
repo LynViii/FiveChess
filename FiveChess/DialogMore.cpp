@@ -37,9 +37,9 @@ BOOL CDialogMore::OnInitDialog()
     m_comboxVSMode.AddString(_T("双人对战 · 本地轮流"));
 
     m_comboxAI.ResetContent();
-    m_comboxAI.AddString(_T("初级 · 启发式选点"));
-    m_comboxAI.AddString(_T("标准 · 2 层搜索"));
-    m_comboxAI.AddString(_T("高级 · 3 层剪枝"));
+    m_comboxAI.AddString(_T("初级"));
+    m_comboxAI.AddString(_T("标准"));
+    m_comboxAI.AddString(_T("高级"));
 
     int modeIndex = 0;
     int aiIndex = 1;

@@ -26,6 +26,7 @@ protected:
     void LayoutScene(int cx, int cy);
     void DrawSidebar(CDC* pDC);
     void UpdateActionState();
+    void InvalidateGameSurface(BOOL includeSidebar);
     CString GetModeText() const;
     CString GetDifficultyText() const;
     CString GetStatusText() const;

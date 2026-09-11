@@ -13,6 +13,7 @@ CChess::CChess(void)
     m_ptWinStart = CPoint(-1, -1);
     m_ptWinEnd = CPoint(-1, -1);
     m_bHasWinningLine = FALSE;
+    m_regretCount = 0;
     memset(m_iPositionPiece, 0, sizeof(m_iPositionPiece));
 }
 
@@ -29,6 +30,7 @@ void CChess::NewGame()
     m_ptWinStart = CPoint(-1, -1);
     m_ptWinEnd = CPoint(-1, -1);
     m_bHasWinningLine = FALSE;
+    m_regretCount = 0;
     m_moves.clear();
     memset(m_iPositionPiece, 0, sizeof(m_iPositionPiece));
 }
@@ -48,6 +50,11 @@ void CChess::Init(CRect rect)
 CRect CChess::GetRectBoard()
 {
     return m_rcBoard;
+}
+
+CRect CChess::GetRectBackground()
+{
+    return m_chessdraw.GetRectBackground();
 }
 
 void CChess::Draw(CDC* pDC)
@@ -186,6 +193,17 @@ int CChess::GetMoveCount() const
     return (int)m_moves.size();
 }
 
+int CChess::GetRegretRemaining() const
+{
+    const int remaining = MAX_REGRET_COUNT - m_regretCount;
+    return remaining > 0 ? remaining : 0;
+}
+
+int CChess::GetRegretLimit() const
+{
+    return MAX_REGRET_COUNT;
+}
+
 BOOL CChess::IsWin(UINT uiCol, UINT uiRow, enumChessColor emChessColor)
 {
     static const int dirs[4][2] = {
@@ -242,7 +260,7 @@ BOOL CChess::IsWin(UINT uiCol, UINT uiRow, enumChessColor emChessColor)
 
 BOOL CChess::CanRegret() const
 {
-    return !m_moves.empty();
+    return !m_moves.empty() && m_regretCount < MAX_REGRET_COUNT;
 }
 
 void CChess::RefreshTurnAfterUndo()
@@ -265,7 +283,7 @@ void CChess::RefreshTurnAfterUndo()
 
 BOOL CChess::Regret()
 {
-    if (m_moves.empty())
+    if (!CanRegret())
     {
         return FALSE;
     }
@@ -285,6 +303,7 @@ BOOL CChess::Regret()
         m_moves.pop_back();
     }
 
+    ++m_regretCount;
     m_emWin = FIGHTING;
     m_bHasWinningLine = FALSE;
     m_ptWinStart = CPoint(-1, -1);

@@ -33,19 +33,33 @@ BOOL CDialogMore::OnInitDialog()
     SetWindowText(_T("对局设置"));
 
     m_comboxVSMode.ResetContent();
-    m_comboxVSMode.AddString(_T("人机对战"));
-    m_comboxVSMode.AddString(_T("双人对战"));
+    m_comboxVSMode.AddString(_T("人机对战 · 玩家执黑"));
+    m_comboxVSMode.AddString(_T("双人对战 · 本地轮流"));
 
     m_comboxAI.ResetContent();
-    m_comboxAI.AddString(_T("初级 · 快速决策"));
-    m_comboxAI.AddString(_T("高级 · Alpha-Beta"));
+    m_comboxAI.AddString(_T("初级 · 启发式选点"));
+    m_comboxAI.AddString(_T("标准 · 2 层搜索"));
+    m_comboxAI.AddString(_T("高级 · 3 层剪枝"));
 
     int modeIndex = 0;
-    int aiIndex = 0;
+    int aiIndex = 1;
     if (m_pChess)
     {
         modeIndex = (m_pChess->GetVSMode() == PERSON_VS_PERSON) ? 1 : 0;
-        aiIndex = (m_pChess->GetAIDepth() == AI_HIGH) ? 1 : 0;
+
+        switch (m_pChess->GetAIDepth())
+        {
+        case AI_PRIMARY:
+            aiIndex = 0;
+            break;
+        case AI_HIGH:
+            aiIndex = 2;
+            break;
+        case AI_MIDDLE:
+        default:
+            aiIndex = 1;
+            break;
+        }
     }
 
     m_comboxVSMode.SetCurSel(modeIndex);
@@ -62,7 +76,20 @@ void CDialogMore::OnBnClickedOk()
         const int aiIndex = m_comboxAI.GetCurSel();
 
         m_pChess->SetVSMode(modeIndex == 1 ? PERSON_VS_PERSON : PERSON_VS_MACHINE);
-        m_pChess->SetAIDepth(aiIndex == 1 ? AI_HIGH : AI_PRIMARY);
+
+        switch (aiIndex)
+        {
+        case 0:
+            m_pChess->SetAIDepth(AI_PRIMARY);
+            break;
+        case 2:
+            m_pChess->SetAIDepth(AI_HIGH);
+            break;
+        case 1:
+        default:
+            m_pChess->SetAIDepth(AI_MIDDLE);
+            break;
+        }
     }
 
     CDialogEx::OnOK();
@@ -75,7 +102,6 @@ void CDialogMore::OnCbnSelchangeVsMode()
 
 void CDialogMore::UpdateControlState()
 {
-    // 双人对战不需要 AI 难度；人机模式下重新启用。
     const BOOL enableAI = (m_comboxVSMode.GetCurSel() == 0);
     m_comboxAI.EnableWindow(enableAI);
 }
